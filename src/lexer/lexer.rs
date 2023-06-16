@@ -1,29 +1,42 @@
 #![allow(unused)]
 
 use std::cell::OnceCell;
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::process::id;
 use std::str::Chars;
 use crate::lexer::token::Token;
 use regex::Regex;
 
-const SKIPS: [char; 3] = [' ', '\n', '\t'];
+const SKIPS: [char; 4] = [' ', '\n', '\t', '\r'];
 
 pub struct Lexer {
     chars: Vec<char>,
     pointer_position: usize,
     identifier_regex: Regex,
     integer_regex: Regex,
+    keywords: HashMap<String, Token>
 }
 
 impl Lexer {
     pub fn new<T: ToString>(program: T) -> Self {
         let program = program.to_string();
+
+        let mut keywords = HashMap::new();
+        keywords.insert("fn".to_string(), Token::Function);
+        keywords.insert("let".to_string(), Token::Let);
+        keywords.insert("true".to_string(), Token::True);
+        keywords.insert("false".to_string(), Token::False);
+        keywords.insert("if".to_string(), Token::If);
+        keywords.insert("else".to_string(), Token::Else);
+        keywords.insert("ret".to_string(), Token::Return);
+
         Self {
             chars: program.chars().collect(),
             pointer_position: 0,
             identifier_regex: Regex::new(r"[a-zA-Z_]").unwrap(),
             integer_regex: Regex::new(r"[0-9]").unwrap(),
+            keywords,
         }
     }
 
@@ -48,12 +61,57 @@ impl Lexer {
             ')' => Token::RParent,
             '{' => Token::LBrace,
             '}' => Token::RBrace,
-            '=' => Token::Assign,
+
+            '=' => {
+                match self.peek_char() {
+                    Some('=') => {
+                        self.move_pointer();
+                        Token::Equal
+                    }
+                    _ => Token::Assign,
+                }
+            },
             '+' => Token::Plus,
+            '-' => Token::Minus,
+            '*' => Token::Asterisk,
+            '/' => Token::Slash,
+
+            '!' => {
+                match self.peek_char() {
+                    Some('=') => {
+                        self.move_pointer();
+                        Token::NotEqual
+                    }
+                    _ => Token::Bang,
+                }
+            },
+
+            '<' => {
+                match self.peek_char() {
+                    Some('=') => {
+                        self.move_pointer();
+                        Token::LTE
+                    },
+                    _ => Token::LT,
+                }
+            },
+            '>' => {
+                match self.peek_char() {
+                    Some('=') => {
+                        self.move_pointer();
+                        Token::GTE
+                    },
+                    _ => Token::GT,
+                }
+            },
+
+            ',' => Token::Comma,
+            ';' => Token::Semicolon,
+
             c if self.identifier_regex.is_match(c.to_string().as_str()) => {
                 let ident = self.read_identifier();
-                if &ident == "let" { Token::Let }
-                else if &ident == "function" { Token::Function }
+                let keyword = self.keywords.get(&ident);
+                if let Some(token) = keyword  { token.clone() }
                 else { Token::Ident(ident) }
             },
             c if self.integer_regex.is_match(c.to_string().as_str()) => Token::Int(self.read_integer()),
@@ -99,6 +157,10 @@ impl Lexer {
 
     pub fn show_char(&self) -> Option<&char> {
         self.chars.get(self.pointer_position)
+    }
+
+    pub fn peek_char(&self) -> Option<&char> {
+        self.chars.get(self.pointer_position+1)
     }
 
     pub fn move_pointer(&mut self) -> Option<()> {

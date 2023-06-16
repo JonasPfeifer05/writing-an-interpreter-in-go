@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 
 #[allow(unused)]
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum Token {
     Illegal,
     Eof,
@@ -11,6 +11,18 @@ pub enum Token {
 
     Assign,
     Plus,
+    Minus,
+    Asterisk,
+    Slash,
+
+    Bang,
+    Equal,
+    NotEqual,
+    GTE,
+    LTE,
+
+    LT,
+    GT,
 
     Comma,
     Semicolon,
@@ -23,6 +35,11 @@ pub enum Token {
 
     Function,
     Let,
+    True,
+    False,
+    If,
+    Else,
+    Return,
 }
 
 impl Debug for Token {
@@ -36,6 +53,18 @@ impl Debug for Token {
 
             Token::Assign => "=",
             Token::Plus => "+",
+            Token::Minus => "-",
+            Token::Asterisk => "*",
+            Token::Slash => "/",
+
+            Token::Bang => "!",
+
+            Token::LT => "<",
+            Token::GT => ">",
+            Token::Equal => "==",
+            Token::NotEqual => "!=",
+            Token::GTE => ">=",
+            Token::LTE => "<=",
 
             Token::Comma => ",",
             Token::Semicolon => ";",
@@ -47,7 +76,12 @@ impl Debug for Token {
 
             Token::Function => "function",
             Token::Let => "let",
+            Token::True => "true",
+            Token::False => "false",
+            Token::If => "if",
+            Token::Else => "else",
+            Token::Return => "ret",
         };
-        f.write_str(representation)
+        f.write_str(&format!("'{representation}'"))
     }
 }

@@ -1,1 +1,2 @@
-() {} = abc 123 + let 12 function
+() {} = abc 123 + let 12 fn ; , ä - * ! / < > true false if else ret
+== != >= <=
