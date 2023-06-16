@@ -4,6 +4,7 @@ use crate::lexer::lexer::Lexer;
 
 const PROMPT: &str = ">> ";
 
+/// Start the REPL application for the user to enter single line commands
 pub fn start_repl() {
     let mut input_buffer = String::new();
 

@@ -42,22 +42,22 @@ fn test_show_char() {
     let program = test_string();
     let mut lexer = Lexer::new(program.clone());
 
-    assert_eq!(lexer.show_char(), Some(&'('));
+    assert_eq!(lexer.current_char(), Some(&'('));
 
     lexer.move_pointer();
 
-    assert_eq!(lexer.show_char(), Some(&')'));
+    assert_eq!(lexer.current_char(), Some(&')'));
 
     lexer.move_pointer();
     lexer.move_pointer();
 
-    assert_eq!(lexer.show_char(), Some(&'{'));
+    assert_eq!(lexer.current_char(), Some(&'{'));
 
     for _ in 0..program.len() {
         lexer.move_pointer();
     }
 
-    assert!(lexer.show_char().is_none())
+    assert!(lexer.current_char().is_none())
 }
 
 #[test]
@@ -84,8 +84,8 @@ fn test_next_token() {
         Token::Asterisk,
         Token::Bang,
         Token::Slash,
-        Token::LT,
-        Token::GT,
+        Token::Lt,
+        Token::Gt,
         Token::True,
         Token::False,
         Token::If,
@@ -93,8 +93,8 @@ fn test_next_token() {
         Token::Return,
         Token::Equal,
         Token::NotEqual,
-        Token::GTE,
-        Token::LTE,
+        Token::Gte,
+        Token::Lte,
     ];
 
     let mut generated_tokens = vec![];
@@ -135,8 +135,8 @@ fn test_generate_tokens() {
         Token::Asterisk,
         Token::Bang,
         Token::Slash,
-        Token::LT,
-        Token::GT,
+        Token::Lt,
+        Token::Gt,
         Token::True,
         Token::False,
         Token::If,
@@ -144,8 +144,8 @@ fn test_generate_tokens() {
         Token::Return,
         Token::Equal,
         Token::NotEqual,
-        Token::GTE,
-        Token::LTE,
+        Token::Gte,
+        Token::Lte,
         Token::Eof,
     ];
 

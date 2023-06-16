@@ -1,38 +1,44 @@
 use std::fmt::{Debug, Formatter};
 
+/// An enum representing a single token of a program
 #[allow(unused)]
 #[derive(Eq, PartialEq, Clone)]
 pub enum Token {
+    // Special Tokens
     Illegal,
     Eof,
 
+    // Identifier and Types
     Ident(String),
     Int(String),
 
+    // Arithmetic Operations
     Assign,
     Plus,
     Minus,
     Asterisk,
     Slash,
 
+    // Logic Operators
     Bang,
     Equal,
     NotEqual,
-    GTE,
-    LTE,
+    Lt,
+    Gt,
+    Lte,
+    Gte,
 
-    LT,
-    GT,
-
+    // Separation Characters
     Comma,
     Semicolon,
 
+    // Brackets
     LParent,
     RParent,
-
     LBrace,
     RBrace,
 
+    // Keywords
     Function,
     Let,
     True,
@@ -59,12 +65,12 @@ impl Debug for Token {
 
             Token::Bang => "!",
 
-            Token::LT => "<",
-            Token::GT => ">",
+            Token::Lt => "<",
+            Token::Gt => ">",
             Token::Equal => "==",
             Token::NotEqual => "!=",
-            Token::GTE => ">=",
-            Token::LTE => "<=",
+            Token::Gte => ">=",
+            Token::Lte => "<=",
 
             Token::Comma => ",",
             Token::Semicolon => ";",
