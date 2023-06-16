@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Formatter};
 
 #[allow(unused)]
+#[derive(Eq, PartialEq)]
 pub enum Token {
     Illegal,
     Eof,
