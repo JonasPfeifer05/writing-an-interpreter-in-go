@@ -4,7 +4,7 @@ use anyhow::bail;
 use crate::ast::expression::{Boolean, Expression, Identifier, InfixExpression, Integer, PrefixExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
-use crate::ast::statement::{ExpressionStatement, LetStatement, ReturnStatement, Statement};
+use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
 use crate::lexer::token::Token;
 use crate::parser::error::ParseError::UnexpectedToken;
 use crate::parser::error::ParseError::*;
@@ -71,10 +71,6 @@ impl Parser {
         Ok(Box::new(ReturnStatement::new(expression)))
     }
 
-    fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Statement>> {
-        todo!()
-    }
-
     fn parse_identifier(&mut self) -> anyhow::Result<Identifier> {
         if self.out_of_tokens() { bail!(RanOutOfTokens) }
 
@@ -116,6 +112,7 @@ impl Parser {
             Token::Minus |
             Token::Bang => self.parse_prefix_expression(),
             Token::LParent => self.parse_grouped_expression(),
+            Token::If => self.parse_if_statement_expression(),
             _ => bail!(UnexpectedToken(self.current_token().unwrap().clone()))
         };
 
@@ -166,6 +163,17 @@ impl Parser {
         self.move_pointer();
         let expression = self.parse_expression(Precedences::Prefix as u8)?;
         Ok(Box::new(PrefixExpression::new(prefix, expression)))
+    }
+
+    fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+        self.move_pointer();
+        let expr = self.parse_expression(Precedences::Lowest as u8)?;
+
+        todo!()
+    }
+
+    fn parse_block_statement(&mut self) -> anyhow::Result<BlockStatement> {
+        todo!();
     }
 
     fn assert_current_token(&mut self, token: &Token) -> anyhow::Result<()> {

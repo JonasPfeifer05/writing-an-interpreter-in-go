@@ -43,3 +43,15 @@ impl ExpressionStatement {
     }
 }
 impl Statement for ExpressionStatement {}
+
+
+#[derive(Debug)]
+pub struct BlockStatement {
+    statements: Vec<Box<dyn Statement>>
+}
+impl BlockStatement {
+    pub fn new(statements: Vec<Box<dyn Statement>>) -> Self {
+        Self { statements }
+    }
+}
+impl Statement for BlockStatement {}

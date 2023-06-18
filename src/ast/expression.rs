@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use std::fmt::{Debug, Formatter};
-use crate::ast::statement::Statement;
+use crate::ast::statement::{BlockStatement, Statement};
 use crate::lexer::token::Token;
 
 pub trait Expression: Debug {}
@@ -87,8 +87,8 @@ impl Debug for InfixExpression {
 #[derive(Debug)]
 pub struct IfExpression{
     condition: Box<dyn Expression>,
-    consequence: Vec<Box<dyn Statement>>,
-    alternative: Option<Vec<Box<dyn Statement>>>,
+    consequence: Vec<BlockStatement>,
+    alternative: Option<BlockStatement>,
 }
 impl Statement for IfExpression {}
 
