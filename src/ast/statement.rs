@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use std::fmt::Debug;
-use crate::ast::node::{Expression, Identifier};
+use crate::ast::expression::{Expression, Identifier};
 use crate::lexer::token::Token;
 
 pub trait Statement: Debug {}

@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use anyhow::bail;
-use crate::ast::node::{Expression, Identifier, InfixExpression, Integer, PrefixExpression};
+use crate::ast::expression::{Expression, Identifier, InfixExpression, Integer, PrefixExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{ExpressionStatement, LetStatement, ReturnStatement, Statement};
