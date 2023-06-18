@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use anyhow::bail;
-use crate::ast::expression::{Expression, Identifier, InfixExpression, Integer, PrefixExpression};
+use crate::ast::expression::{Boolean, Expression, Identifier, InfixExpression, Integer, PrefixExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -106,8 +106,17 @@ impl Parser {
         let mut left_expr: anyhow::Result<Box<dyn Expression>> = match self.current_token().unwrap() {
             Token::Ident(_) => self.parse_identifier().map(|x| Box::new(x) as Box<dyn Expression>),
             Token::Int(_) => self.parse_integer().map(|x| Box::new(x) as Box<dyn Expression>),
+            Token::True => {
+                self.move_pointer();
+                Ok(Box::new(Boolean::new(true)))
+            }
+            Token::False => {
+                self.move_pointer();
+                Ok(Box::new(Boolean::new(false)))
+            }
             Token::Minus |
             Token::Bang => self.parse_prefix_expression(),
+            Token::LParent => self.parse_grouped_expression(),
             _ => bail!(UnexpectedToken(self.current_token().unwrap().clone()))
         };
 
@@ -131,6 +140,18 @@ impl Parser {
         }
 
         left_expr
+    }
+
+    fn parse_grouped_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+        self.move_pointer();
+
+        let expr = self.parse_expression(Precedences::Lowest as u8);
+
+        if self.out_of_tokens() { bail!(RanOutOfTokens) }
+        if self.assert_current_token(&Token::RParent).is_err() { bail!(UnexpectedToken(self.current_token().unwrap().clone())) }
+        self.move_pointer();
+
+        return expr;
     }
 
     fn parse_infix_expression(&mut self, left: Box<dyn Expression>) -> anyhow::Result<Box<dyn Expression>> {

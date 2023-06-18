@@ -33,6 +33,21 @@ impl Debug for Integer {
     }
 }
 
+pub struct Boolean {
+    val: bool
+}
+impl Boolean {
+    pub fn new(val: bool) -> Self {
+        Self { val }
+    }
+}
+impl Expression for Boolean {}
+impl Debug for Boolean {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{}", self.val))
+    }
+}
+
 pub struct PrefixExpression {
     prefix: Token,
     right: Box<dyn Expression>,
