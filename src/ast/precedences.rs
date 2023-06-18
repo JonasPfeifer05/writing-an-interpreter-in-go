@@ -33,6 +33,8 @@ impl Token {
 
             Token::Bang => Precedences::Prefix,
 
+            Token::LParent => Precedences::Call,
+
             _ => Precedences::Lowest
         }
     }

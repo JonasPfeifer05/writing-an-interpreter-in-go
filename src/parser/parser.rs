@@ -1,7 +1,8 @@
 #![allow(unused)]
 
+use std::any::Any;
 use anyhow::bail;
-use crate::ast::expression::{Boolean, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression};
+use crate::ast::expression::{Boolean, CallExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -133,6 +134,7 @@ impl Parser {
                 Token::Gt |
                 Token::Lte |
                 Token::Gte => self.parse_infix_expression(left_expr?),
+                Token::LParent => self.parse_call_expression(left_expr?),
                 _ => { return left_expr; }
             };
 
@@ -140,6 +142,37 @@ impl Parser {
         }
 
         left_expr
+    }
+
+    fn parse_call_expression(&mut self, function: Box<dyn Expression>) -> anyhow::Result<Box<dyn Expression>> {
+        let arguments = self.parse_call_arguments()?;
+
+        Ok(Box::new(CallExpression::new(function, arguments)))
+    }
+
+    fn parse_call_arguments(&mut self) -> anyhow::Result<Vec<Box<dyn Expression>>> {
+        self.assert_current_token(&Token::LParent)?;
+        self.move_pointer();
+
+        if self.assert_current_token(&Token::RParent).is_ok() {
+            self.move_pointer();
+            return Ok(vec![]);
+        }
+
+        let mut expressions = vec![];
+
+        expressions.push(self.parse_expression(Precedences::Lowest as u8)?);
+
+        while self.assert_current_token(&Token::Comma).is_ok() {
+            self.move_pointer();
+            if self.assert_current_token(&Token::RParent).is_ok() { break; };
+            expressions.push(self.parse_expression(Precedences::Lowest as u8)?);
+        }
+
+        self.assert_current_token(&Token::RParent)?;
+        self.move_pointer();
+
+        Ok(expressions)
     }
 
     fn parse_grouped_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
@@ -211,13 +244,7 @@ impl Parser {
     fn parse_function_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
         self.move_pointer();
 
-        self.assert_current_token(&Token::LParent)?;
-        self.move_pointer();
-
         let parameters = self.parse_parameters()?;
-
-        self.assert_current_token(&Token::RParent)?;
-        self.move_pointer();
 
         let body = self.parse_block_statement()?;
 
@@ -225,7 +252,11 @@ impl Parser {
     }
 
     fn parse_parameters(&mut self) -> anyhow::Result<Vec<Identifier>> {
+        self.assert_current_token(&Token::LParent)?;
+        self.move_pointer();
+
         if self.assert_current_token(&Token::RParent).is_ok() {
+            self.move_pointer();
             return Ok(vec![]);
         }
 
@@ -235,9 +266,12 @@ impl Parser {
 
         while self.assert_current_token(&Token::Comma).is_ok() {
             self.move_pointer();
-            if self.assert_current_token(&Token::Ident("".to_string())).is_err() { break; };
+            if self.assert_current_token(&Token::RParent).is_ok() { break; };
             identifiers.push(self.parse_identifier()?);
         }
+
+        self.assert_current_token(&Token::RParent)?;
+        self.move_pointer();
 
         Ok(identifiers)
     }
