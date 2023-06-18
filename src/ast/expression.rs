@@ -87,8 +87,13 @@ impl Debug for InfixExpression {
 #[derive(Debug)]
 pub struct IfExpression{
     condition: Box<dyn Expression>,
-    consequence: Vec<BlockStatement>,
+    consequence: BlockStatement,
     alternative: Option<BlockStatement>,
 }
-impl Statement for IfExpression {}
+impl IfExpression {
+    pub fn new(condition: Box<dyn Expression>, consequence: BlockStatement, alternative: Option<BlockStatement>) -> Self {
+        Self { condition, consequence, alternative }
+    }
+}
+impl Expression for IfExpression {}
 

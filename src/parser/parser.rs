@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use anyhow::bail;
-use crate::ast::expression::{Boolean, Expression, Identifier, InfixExpression, Integer, PrefixExpression};
+use crate::ast::expression::{Boolean, Expression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -167,9 +167,21 @@ impl Parser {
 
     fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
         self.move_pointer();
-        let expr = self.parse_expression(Precedences::Lowest as u8)?;
 
-        todo!()
+        self.assert_current_token(&Token::LParent)?;
+        self.move_pointer();
+
+        let condition = self.parse_expression(Precedences::Lowest as u8)?;
+
+        self.assert_current_token(&Token::RParent)?;
+        self.move_pointer();
+
+        self.assert_current_token(&Token::LBrace)?;
+        self.move_pointer();
+
+        let consequence = self.parse_block_statement()?;
+
+        Ok(Box::new(IfExpression::new(condition, consequence, None)))
     }
 
     fn parse_block_statement(&mut self) -> anyhow::Result<BlockStatement> {
