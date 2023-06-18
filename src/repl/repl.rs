@@ -1,6 +1,7 @@
-use std::io::{BufRead, Read, stdin, stdout, Write};
+use std::io::{BufRead, stdin, stdout, Write};
 use colored::Colorize;
 use crate::lexer::lexer::Lexer;
+use crate::parser::parser::Parser;
 
 const PROMPT: &str = ">> ";
 
@@ -21,6 +22,14 @@ pub fn start_repl() {
         stdin().lock().read_line(&mut input_buffer).expect("Error while reading from stdin!");
         if input_buffer.trim() == "exit" { break }
         let mut lexer = Lexer::new(&mut input_buffer);
-        println!("{}", format!("{:?}", lexer.generate_tokens()).bright_blue());
+        let tokens = lexer.generate_tokens();
+        println!("{}", format!("{:?}", tokens).bright_blue());
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse();
+        if let Ok(program) = program {
+            println!("{:?}", program);
+        } else if let Err(err) = program {
+            eprintln!("Error: {err}");
+        }
     }
 }

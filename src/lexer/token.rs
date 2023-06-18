@@ -3,6 +3,7 @@ use std::fmt::{Debug, Formatter};
 /// An enum representing a single token of a program
 #[allow(unused)]
 #[derive(Eq, PartialEq, Clone)]
+#[repr(u8)]
 pub enum Token {
     // Special Tokens
     Illegal,
@@ -48,6 +49,20 @@ pub enum Token {
     Return,
 }
 
+impl Token {
+    pub fn value(&self) -> String {
+        match self {
+            Token::Ident(val) => val.clone(),
+            Token::Int(val) => val.clone(),
+            _ => { unreachable!("Should never want the value of this token!") }
+        }
+    }
+
+    pub fn variant_is_equal(a: &Token, b: &Token) -> bool {
+        std::mem::discriminant(a) == std::mem::discriminant(b)
+    }
+}
+
 impl Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let representation = match self {
@@ -88,6 +103,6 @@ impl Debug for Token {
             Token::Else => "else",
             Token::Return => "ret",
         };
-        f.write_str(&format!("'{representation}'"))
+        f.write_str(&format!("{representation}"))
     }
 }
