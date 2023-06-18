@@ -1,4 +1,7 @@
+#![allow(unused)]
+
 use std::fmt::{Debug, Formatter};
+use crate::ast::statement::Statement;
 use crate::lexer::token::Token;
 
 pub trait Expression: Debug {}
@@ -80,4 +83,12 @@ impl Debug for InfixExpression {
         f.write_str(&format!("({:?} {:?} {:?})", self.left, self.operator, self.right))
     }
 }
+
+#[derive(Debug)]
+pub struct IfExpression{
+    condition: Box<dyn Expression>,
+    consequence: Vec<Box<dyn Statement>>,
+    alternative: Option<Vec<Box<dyn Statement>>>,
+}
+impl Statement for IfExpression {}
 

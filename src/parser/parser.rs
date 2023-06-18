@@ -25,7 +25,6 @@ impl Parser {
         while !self.out_of_tokens() && !Token::variant_is_equal(self.current_token().unwrap(), &Token::Eof) {
             let statement = match self.current_token().unwrap() {
                 Token::Let => self.parse_let_statement(),
-                Token::If => self.parse_if_statement(),
                 Token::Return => self.parse_return_statement(),
                 _ => self.parse_expression_statement(),
             };
@@ -72,7 +71,7 @@ impl Parser {
         Ok(Box::new(ReturnStatement::new(expression)))
     }
 
-    fn parse_if_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
+    fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Statement>> {
         todo!()
     }
 
