@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use anyhow::bail;
-use crate::ast::expression::{Boolean, Expression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression};
+use crate::ast::expression::{Boolean, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -116,6 +116,7 @@ impl Parser {
             Token::Bang => self.parse_prefix_expression(),
             Token::LParent => self.parse_grouped_expression(),
             Token::If => self.parse_if_statement_expression(),
+            Token::Function => self.parse_function_expression(),
             _ => bail!(UnexpectedToken(self.current_token().unwrap().clone()))
         };
 
@@ -132,7 +133,7 @@ impl Parser {
                 Token::Gt |
                 Token::Lte |
                 Token::Gte => self.parse_infix_expression(left_expr?),
-                _ => { return left_expr }
+                _ => { return left_expr; }
             };
 
             left_expr = infix;
@@ -179,17 +180,11 @@ impl Parser {
         self.assert_current_token(&Token::RParent)?;
         self.move_pointer();
 
-        self.assert_current_token(&Token::LBrace)?;
-        self.move_pointer();
-
         let consequence = self.parse_block_statement()?;
 
         if self.assert_current_token(&Token::Else).is_err() {
             return Ok(Box::new(IfExpression::new(condition, consequence, None)));
         }
-        self.move_pointer();
-
-        self.assert_current_token(&Token::LBrace)?;
         self.move_pointer();
 
         let alternatives = self.parse_block_statement()?;
@@ -198,6 +193,9 @@ impl Parser {
     }
 
     fn parse_block_statement(&mut self) -> anyhow::Result<BlockStatement> {
+        self.assert_current_token(&Token::LBrace)?;
+        self.move_pointer();
+
         let mut consequences: Vec<Box<dyn Statement>> = vec![];
 
         while !self.out_of_tokens() && self.assert_current_token(&Token::RBrace).is_err() {
@@ -208,6 +206,40 @@ impl Parser {
         self.move_pointer();
 
         Ok(BlockStatement::new(consequences))
+    }
+
+    fn parse_function_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+        self.move_pointer();
+
+        self.assert_current_token(&Token::LParent)?;
+        self.move_pointer();
+
+        let parameters = self.parse_parameters()?;
+
+        self.assert_current_token(&Token::RParent)?;
+        self.move_pointer();
+
+        let body = self.parse_block_statement()?;
+
+        Ok(Box::new(FunctionExpression::new(parameters, body)))
+    }
+
+    fn parse_parameters(&mut self) -> anyhow::Result<Vec<Identifier>> {
+        if self.assert_current_token(&Token::RParent).is_ok() {
+            return Ok(vec![]);
+        }
+
+        let mut identifiers = vec![];
+
+        identifiers.push(self.parse_identifier()?);
+
+        while self.assert_current_token(&Token::Comma).is_ok() {
+            self.move_pointer();
+            if self.assert_current_token(&Token::Ident("".to_string())).is_err() { break; };
+            identifiers.push(self.parse_identifier()?);
+        }
+
+        Ok(identifiers)
     }
 
     fn assert_current_token(&mut self, token: &Token) -> anyhow::Result<()> {
