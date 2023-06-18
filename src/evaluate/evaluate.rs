@@ -17,6 +17,13 @@ pub fn eval_all(statements: &Vec<Box<dyn Statement>>) -> anyhow::Result<Object> 
 
     for statement in statements.iter().skip(1) {
         result = eval(statement)?;
+        match result {
+            Object::Return(val) => {
+                result = *val;
+                break
+            },
+            _ => {}
+        }
     }
 
     Ok(result)
