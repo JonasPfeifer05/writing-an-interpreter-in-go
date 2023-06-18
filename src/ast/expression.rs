@@ -1,10 +1,15 @@
 #![allow(unused)]
 
 use std::fmt::{Debug, Display, format, Formatter};
+use anyhow::bail;
+use crate::evaluate::object::{Evaluate, Object};
 use crate::ast::statement::{BlockStatement, Statement};
+use crate::evaluate::error::EvalError::IllegalOperation;
 use crate::lexer::token::Token;
 
-pub trait Expression: Display + Debug {}
+
+
+pub trait Expression: Display + Debug + Evaluate {}
 
 #[derive(Debug)]
 pub struct Identifier {
@@ -14,6 +19,12 @@ pub struct Identifier {
 impl Identifier {
     pub fn new(value: String) -> Self {
         Self { value }
+    }
+}
+
+impl Evaluate for Identifier {
+    fn eval(&self) -> anyhow::Result<Object> {
+        todo!()
     }
 }
 
@@ -36,6 +47,12 @@ impl Integer {
     }
 }
 
+impl Evaluate for Integer {
+    fn eval(&self) -> anyhow::Result<Object> {
+        Ok(Object::Int(self.val.parse()?))
+    }
+}
+
 impl Expression for Integer {}
 
 impl Display for Integer {
@@ -52,6 +69,12 @@ pub struct Boolean {
 impl Boolean {
     pub fn new(val: bool) -> Self {
         Self { val }
+    }
+}
+
+impl Evaluate for Boolean {
+    fn eval(&self) -> anyhow::Result<Object> {
+        Ok(Object::Bool(self.val))
     }
 }
 
@@ -72,6 +95,27 @@ pub struct PrefixExpression {
 impl PrefixExpression {
     pub fn new(prefix: Token, right: Box<dyn Expression>) -> Self {
         Self { prefix, right }
+    }
+}
+
+impl Evaluate for PrefixExpression {
+    fn eval(&self) -> anyhow::Result<Object> {
+        let val = self.right.eval()?;
+        Ok(match self.prefix {
+            Token::Minus => {
+                match val {
+                    Object::Int(val) => Object::Int(-val),
+                    _ => bail!(IllegalOperation(Token::Minus, val)),
+                }
+            }
+            Token::Bang => {
+                match val {
+                    Object::Bool(val) => Object::Bool(!val),
+                    _ => bail!(IllegalOperation(Token::Bang, val)),
+                }
+            }
+            _ => unreachable!(),
+        })
     }
 }
 
@@ -96,6 +140,12 @@ impl InfixExpression {
     }
 }
 
+impl Evaluate for InfixExpression {
+    fn eval(&self) -> anyhow::Result<Object> {
+        todo!()
+    }
+}
+
 impl Expression for InfixExpression {}
 
 impl Display for InfixExpression {
@@ -114,6 +164,12 @@ pub struct IfExpression {
 impl IfExpression {
     pub fn new(condition: Box<dyn Expression>, consequence: BlockStatement, alternative: Option<BlockStatement>) -> Self {
         Self { condition, consequence, alternative }
+    }
+}
+
+impl Evaluate for IfExpression {
+    fn eval(&self) -> anyhow::Result<Object> {
+        todo!()
     }
 }
 
@@ -141,6 +197,12 @@ impl FunctionExpression {
     }
 }
 
+impl Evaluate for FunctionExpression {
+    fn eval(&self) -> anyhow::Result<Object> {
+        todo!()
+    }
+}
+
 impl Expression for FunctionExpression {}
 
 impl Display for FunctionExpression {
@@ -165,6 +227,13 @@ impl CallExpression {
         Self { function, arguments }
     }
 }
+
+impl Evaluate for CallExpression {
+    fn eval(&self) -> anyhow::Result<Object> {
+        todo!()
+    }
+}
+
 impl Expression for CallExpression {}
 impl Display for CallExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

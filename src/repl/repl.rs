@@ -1,5 +1,6 @@
 use std::io::{BufRead, stdin, stdout, Write};
 use colored::Colorize;
+use crate::evaluate::evaluate::eval_program;
 use crate::lexer::lexer::Lexer;
 use crate::parser::parser::Parser;
 
@@ -42,8 +43,14 @@ pub fn start_repl() {
         if let Ok(program) = program {
             println!("{:#?}", program);
             println!("{}", program);
+            let result =  eval_program(program);
+            if let Ok(result) = result {
+                println!("{}", result);
+            } else if let Err(err) = result {
+                eprintln!("Error while evaluating: {err}", )
+            }
         } else if let Err(err) = program {
-            eprintln!("Error: {err}");
+            eprintln!("Error while parsing: {err}");
         }
     }
 }

@@ -2,9 +2,11 @@
 
 use std::fmt::{Debug, Display, format, Formatter};
 use crate::ast::expression::{Expression, Identifier};
+use crate::evaluate::evaluate::eval_all;
+use crate::evaluate::object::{Evaluate, Object};
 use crate::lexer::token::Token;
 
-pub trait Statement: Display + Debug {}
+pub trait Statement: Display + Debug + Evaluate {}
 
 #[derive(Debug)]
 pub struct LetStatement {
@@ -16,6 +18,13 @@ impl LetStatement {
         Self { name, value }
     }
 }
+
+impl Evaluate for LetStatement {
+    fn eval(&self) -> anyhow::Result<Object> {
+        todo!()
+    }
+}
+
 impl Statement for LetStatement {}
 
 impl Display for LetStatement {
@@ -33,6 +42,13 @@ impl ReturnStatement {
         Self { value }
     }
 }
+
+impl Evaluate for ReturnStatement {
+    fn eval(&self) -> anyhow::Result<Object> {
+        Ok(Object::Return(Box::new(self.value.eval()?)))
+    }
+}
+
 impl Statement for ReturnStatement {}
 
 impl Display for ReturnStatement {
@@ -51,6 +67,13 @@ impl ExpressionStatement {
         Self { token, expression }
     }
 }
+
+impl Evaluate for ExpressionStatement {
+    fn eval(&self) -> anyhow::Result<Object> {
+        self.expression.eval()
+    }
+}
+
 impl Statement for ExpressionStatement {}
 
 impl Display for ExpressionStatement {
@@ -68,6 +91,13 @@ impl BlockStatement {
         Self { statements }
     }
 }
+
+impl Evaluate for BlockStatement {
+    fn eval(&self) -> anyhow::Result<Object> {
+        eval_all(&self.statements)
+    }
+}
+
 impl Statement for BlockStatement {}
 
 impl Display for BlockStatement {
