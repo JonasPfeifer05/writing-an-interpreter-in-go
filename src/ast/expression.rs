@@ -45,7 +45,7 @@ impl PrefixExpression {
 impl Expression for PrefixExpression {}
 impl Debug for PrefixExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("{:?}{:?}", self.prefix, self.right))
+        f.write_str(&format!("({:?}{:?})", self.prefix, self.right))
     }
 }
 
