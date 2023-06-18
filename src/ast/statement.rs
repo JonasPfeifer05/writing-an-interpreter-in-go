@@ -55,7 +55,7 @@ impl Statement for ExpressionStatement {}
 
 impl Display for ExpressionStatement {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("{}", self.expression))
+        f.write_str(&format!("{};", self.expression))
     }
 }
 
@@ -76,7 +76,7 @@ impl Display for BlockStatement {
 
         for statement in &self.statements {
             string.push_str(&format!("{statement}"));
-            string.push('\n');
+            string.push(' ');
         }
 
         string.pop();
