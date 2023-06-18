@@ -23,16 +23,18 @@ impl Parser {
         let mut program = Program::default();
 
         while !self.out_of_tokens() && !Token::variant_is_equal(self.current_token().unwrap(), &Token::Eof) {
-            let statement = match self.current_token().unwrap() {
-                Token::Let => self.parse_let_statement(),
-                Token::Return => self.parse_return_statement(),
-                _ => self.parse_expression_statement(),
-            };
-
-            program.add_statement(statement?);
+            program.add_statement(self.parse_statement()?);
         }
 
         Ok(program)
+    }
+
+    fn parse_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
+        match self.current_token().unwrap() {
+            Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
+            _ => self.parse_expression_statement(),
+        }
     }
 
     fn parse_expression_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
@@ -40,8 +42,9 @@ impl Parser {
 
         let expr = self.parse_expression(Precedences::Lowest as u8)?;
 
-        self.assert_current_token(&Token::Semicolon)?;
-        self.move_pointer();
+        if self.assert_current_token(&Token::Semicolon).is_ok() {
+            self.move_pointer();
+        }
 
         Ok(Box::new(ExpressionStatement::new(token, expr)))
     }
@@ -181,11 +184,30 @@ impl Parser {
 
         let consequence = self.parse_block_statement()?;
 
-        Ok(Box::new(IfExpression::new(condition, consequence, None)))
+        if self.assert_current_token(&Token::Else).is_err() {
+            return Ok(Box::new(IfExpression::new(condition, consequence, None)));
+        }
+        self.move_pointer();
+
+        self.assert_current_token(&Token::LBrace)?;
+        self.move_pointer();
+
+        let alternatives = self.parse_block_statement()?;
+
+        Ok(Box::new(IfExpression::new(condition, consequence, Some(alternatives))))
     }
 
     fn parse_block_statement(&mut self) -> anyhow::Result<BlockStatement> {
-        todo!();
+        let mut consequences: Vec<Box<dyn Statement>> = vec![];
+
+        while !self.out_of_tokens() && self.assert_current_token(&Token::RBrace).is_err() {
+            consequences.push(self.parse_statement()?);
+        }
+
+        self.assert_current_token(&Token::RBrace)?;
+        self.move_pointer();
+
+        Ok(BlockStatement::new(consequences))
     }
 
     fn assert_current_token(&mut self, token: &Token) -> anyhow::Result<()> {

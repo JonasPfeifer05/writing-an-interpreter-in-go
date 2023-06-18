@@ -97,3 +97,16 @@ impl IfExpression {
 }
 impl Expression for IfExpression {}
 
+
+#[derive(Debug)]
+pub struct FunctionExpression {
+    parameters: Vec<Identifier>,
+    body: BlockStatement,
+}
+impl FunctionExpression {
+    pub fn new(parameters: Vec<Identifier>, body: BlockStatement) -> Self {
+        Self { parameters, body }
+    }
+}
+impl Expression for FunctionExpression {}
+
