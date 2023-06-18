@@ -6,5 +6,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum EvalError {
     #[error("Tried to apply illegal operation {0} to {1}!")]
-    IllegalOperation(Token, Object)
+    IllegalOperation(Token, Object),
+    #[error("Tried to apply operation {0} between not matching values {1} and {2}!")]
+    MixedTypeOperation(Token, Object, Object),
 }

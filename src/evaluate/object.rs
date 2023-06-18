@@ -5,11 +5,18 @@ pub trait Evaluate {
 }
 
 #[derive(Debug)]
+#[repr(usize)]
 pub enum Object {
-    Int(isize),
-    Bool(bool),
-    Null,
-    Return(Box<Object>),
+    Int(isize) = 0,
+    Bool(bool) = 1,
+    Null = 2,
+    Return(Box<Object>) = 3,
+}
+
+impl Object {
+    pub fn variant_is_equal(a: &Object, b: &Object) -> bool {
+        std::mem::discriminant(a) == std::mem::discriminant(b)
+    }
 }
 
 impl Display for Object {

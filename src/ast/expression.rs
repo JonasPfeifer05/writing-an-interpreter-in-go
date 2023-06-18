@@ -4,9 +4,8 @@ use std::fmt::{Debug, Display, format, Formatter};
 use anyhow::bail;
 use crate::evaluate::object::{Evaluate, Object};
 use crate::ast::statement::{BlockStatement, Statement};
-use crate::evaluate::error::EvalError::IllegalOperation;
+use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation};
 use crate::lexer::token::Token;
-
 
 
 pub trait Expression: Display + Debug + Evaluate {}
@@ -142,7 +141,70 @@ impl InfixExpression {
 
 impl Evaluate for InfixExpression {
     fn eval(&self) -> anyhow::Result<Object> {
-        todo!()
+        let left = self.left.eval()?;
+        let right = self.right.eval()?;
+
+        if !Object::variant_is_equal(&left, &right) { bail!(MixedTypeOperation(self.operator.clone(), left, right)) }
+
+        match self.operator {
+            Token::Plus |
+            Token::Minus |
+            Token::Asterisk |
+            Token::Slash |
+            Token::Lt |
+            Token::Gt |
+            Token::Lte |
+            Token::Gte => {
+                match left {
+                    Object::Int(_) => {}
+                    _ => bail!(IllegalOperation(self.operator.clone(), left))
+                }
+            },
+            Token::Equal |
+            Token::NotEqual => match left {
+                Object::Int(_) => {}
+                Object::Bool(_) => {}
+                _ => bail!(IllegalOperation(self.operator.clone(), left))
+            },
+            _ => unreachable!()
+        }
+        let left_int = match left {
+            Object::Int(val) => Some(val),
+            _ => None,
+        };
+        let right_int = match right {
+            Object::Int(val) => Some(val),
+            _ => None,
+        };
+
+        let left_bool = match left {
+            Object::Bool(val) => Some(val),
+            _ => None,
+        };
+        let right_bool = match right {
+            Object::Bool(val) => Some(val),
+            _ => None,
+        };
+
+        Ok(match self.operator {
+            Token::Plus => Object::Int(left_int.unwrap() + right_int.unwrap()),
+            Token::Minus => Object::Int(left_int.unwrap() - right_int.unwrap()),
+            Token::Asterisk => Object::Int(left_int.unwrap() * right_int.unwrap()),
+            Token::Slash => Object::Int(left_int.unwrap() / right_int.unwrap()),
+            Token::Equal => Object::Bool({
+                if left_bool.is_some() { left_bool.unwrap() == right_bool.unwrap()  }
+                else { left_int.unwrap() == right_int.unwrap() }
+            }),
+            Token::NotEqual => Object::Bool({
+                if left_bool.is_some() { left_bool.unwrap() != right_bool.unwrap()  }
+                else { left_int.unwrap() != right_int.unwrap() }
+            }),
+            Token::Lt => Object::Bool(left_int.unwrap() < right_int.unwrap()),
+            Token::Gt => Object::Bool(left_int.unwrap() > right_int.unwrap()),
+            Token::Lte => Object::Bool(left_int.unwrap() <= right_int.unwrap()),
+            Token::Gte => Object::Bool(left_int.unwrap() >= right_int.unwrap()),
+            _ => unreachable!()
+        })
     }
 }
 
@@ -222,6 +284,7 @@ pub struct CallExpression {
     function: Box<dyn Expression>,
     arguments: Vec<Box<dyn Expression>>,
 }
+
 impl CallExpression {
     pub fn new(function: Box<dyn Expression>, arguments: Vec<Box<dyn Expression>>) -> Self {
         Self { function, arguments }
@@ -235,6 +298,7 @@ impl Evaluate for CallExpression {
 }
 
 impl Expression for CallExpression {}
+
 impl Display for CallExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut args = String::new();
