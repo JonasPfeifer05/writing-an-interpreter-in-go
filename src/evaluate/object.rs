@@ -5,12 +5,11 @@ pub trait Evaluate {
 }
 
 #[derive(Debug)]
-#[repr(usize)]
 pub enum Object {
-    Int(isize) = 0,
-    Bool(bool) = 1,
-    Null = 2,
-    Return(Box<Object>) = 3,
+    Int(isize),
+    Bool(bool),
+    Null,
+    Return(Box<Object>),
 }
 
 impl Object {
@@ -25,7 +24,7 @@ impl Display for Object {
             Object::Int(val) => f.write_str(&format!("{val}")),
             Object::Bool(val) => f.write_str(&format!("{val}")),
             Object::Null => f.write_str("null"),
-            Object::Return(val) => f.write_str(&format!("{val}")),
+            Object::Return(val) => f.write_str(&format!("ret {val}")),
         }
     }
 }
