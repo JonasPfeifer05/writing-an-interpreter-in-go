@@ -90,6 +90,11 @@ impl BlockStatement {
     pub fn new(statements: Vec<Box<dyn Statement>>) -> Self {
         Self { statements }
     }
+
+
+    pub fn statements(&self) -> &Vec<Box<dyn Statement>> {
+        &self.statements
+    }
 }
 
 impl Evaluate for BlockStatement {

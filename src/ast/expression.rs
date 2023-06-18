@@ -4,7 +4,8 @@ use std::fmt::{Debug, Display, format, Formatter};
 use anyhow::bail;
 use crate::evaluate::object::{Evaluate, Object};
 use crate::ast::statement::{BlockStatement, Statement};
-use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation};
+use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation, UnexpectedObject};
+use crate::evaluate::evaluate::eval_all;
 use crate::lexer::token::Token;
 
 
@@ -231,7 +232,19 @@ impl IfExpression {
 
 impl Evaluate for IfExpression {
     fn eval(&self) -> anyhow::Result<Object> {
-        todo!()
+        let condition = match self.condition.eval()? {
+            Object::Bool(val) => val,
+            _ => bail!(UnexpectedObject("Boolean".to_string()))
+        };
+
+        if condition {
+            eval_all(self.consequence.statements())
+        }
+        else if let Some(alternative) = &self.alternative {
+            eval_all(alternative.statements())
+        } else {
+            Ok(Object::Null)
+        }
     }
 }
 
