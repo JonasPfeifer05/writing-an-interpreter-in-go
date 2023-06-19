@@ -7,11 +7,11 @@ pub fn eval_program(program: Program, environment: &mut Environment) -> anyhow::
     eval_all(program.statements(), environment)
 }
 
-pub fn eval(statement: &Box<dyn Statement>,environment: &mut Environment) -> anyhow::Result<Object> {
+pub fn eval(statement: &Box<dyn Statement + Send + Sync>,environment: &mut Environment) -> anyhow::Result<Object> {
     statement.eval(environment)
 }
 
-pub fn eval_all(statements: &Vec<Box<dyn Statement>>, environment: &mut Environment) -> anyhow::Result<Object> {
+pub fn eval_all(statements: &Vec<Box<dyn Statement + Send + Sync>>, environment: &mut Environment) -> anyhow::Result<Object> {
     if statements.is_empty() { return Ok(Object::Null) }
 
     let mut result = eval(statements.first().unwrap(),environment)?;

@@ -30,7 +30,7 @@ impl Parser {
         Ok(program)
     }
 
-    fn parse_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
+    fn parse_statement(&mut self) -> anyhow::Result<Box<dyn Statement + Send + Sync>> {
         match self.current_token().unwrap() {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
@@ -38,7 +38,7 @@ impl Parser {
         }
     }
 
-    fn parse_expression_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
+    fn parse_expression_statement(&mut self) -> anyhow::Result<Box<dyn Statement + Send + Sync>> {
         let token = self.current_token().unwrap().clone();
 
         let expr = self.parse_expression(Precedences::Lowest as u8)?;
@@ -50,7 +50,7 @@ impl Parser {
         Ok(Box::new(ExpressionStatement::new(token, expr)))
     }
 
-    fn parse_let_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
+    fn parse_let_statement(&mut self) -> anyhow::Result<Box<dyn Statement + Send + Sync>> {
         self.move_pointer();
         let identifier = self.parse_identifier()?;
 
@@ -65,7 +65,7 @@ impl Parser {
         Ok(Box::new(LetStatement::new(identifier, expression)))
     }
 
-    fn parse_return_statement(&mut self) -> anyhow::Result<Box<dyn Statement>> {
+    fn parse_return_statement(&mut self) -> anyhow::Result<Box<dyn Statement + Send + Sync>> {
         self.move_pointer();
         let expression = self.parse_expression(Precedences::Lowest as u8)?;
 
@@ -99,12 +99,12 @@ impl Parser {
         Ok(int)
     }
 
-    fn parse_expression(&mut self, precedence: u8) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_expression(&mut self, precedence: u8) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         if self.out_of_tokens() { bail!(RanOutOfTokens) }
 
-        let mut left_expr: anyhow::Result<Box<dyn Expression>> = match self.current_token().unwrap() {
-            Token::Ident(_) => self.parse_identifier().map(|x| Box::new(x) as Box<dyn Expression>),
-            Token::Int(_) => self.parse_integer().map(|x| Box::new(x) as Box<dyn Expression>),
+        let mut left_expr: anyhow::Result<Box<dyn Expression + Send + Sync>> = match self.current_token().unwrap() {
+            Token::Ident(_) => self.parse_identifier().map(|x| Box::new(x) as Box<dyn Expression + Send + Sync>),
+            Token::Int(_) => self.parse_integer().map(|x| Box::new(x) as Box<dyn Expression + Send + Sync>),
             Token::True => {
                 self.move_pointer();
                 Ok(Box::new(Boolean::new(true)))
@@ -144,13 +144,13 @@ impl Parser {
         left_expr
     }
 
-    fn parse_call_expression(&mut self, function: Box<dyn Expression>) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_call_expression(&mut self, function: Box<dyn Expression + Send + Sync>) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         let arguments = self.parse_call_arguments()?;
 
         Ok(Box::new(CallExpression::new(function, arguments)))
     }
 
-    fn parse_call_arguments(&mut self) -> anyhow::Result<Vec<Box<dyn Expression>>> {
+    fn parse_call_arguments(&mut self) -> anyhow::Result<Vec<Box<dyn Expression + Send + Sync>>> {
         self.assert_current_token(&Token::LParent)?;
         self.move_pointer();
 
@@ -175,7 +175,7 @@ impl Parser {
         Ok(expressions)
     }
 
-    fn parse_grouped_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_grouped_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         self.move_pointer();
 
         let expr = self.parse_expression(Precedences::Lowest as u8);
@@ -187,7 +187,7 @@ impl Parser {
         return expr;
     }
 
-    fn parse_infix_expression(&mut self, left: Box<dyn Expression>) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_infix_expression(&mut self, left: Box<dyn Expression + Send + Sync>) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         let token = self.current_token().unwrap().clone();
         let precedence = self.current_precedence()? as u8;
         self.move_pointer();
@@ -195,14 +195,14 @@ impl Parser {
         Ok(Box::new(InfixExpression::new(left, token, right)))
     }
 
-    fn parse_prefix_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_prefix_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         let prefix = self.current_token().unwrap().clone();
         self.move_pointer();
         let expression = self.parse_expression(Precedences::Prefix as u8)?;
         Ok(Box::new(PrefixExpression::new(prefix, expression)))
     }
 
-    fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         self.move_pointer();
 
         self.assert_current_token(&Token::LParent)?;
@@ -229,7 +229,7 @@ impl Parser {
         self.assert_current_token(&Token::LBrace)?;
         self.move_pointer();
 
-        let mut consequences: Vec<Box<dyn Statement>> = vec![];
+        let mut consequences: Vec<Box<dyn Statement + Send + Sync>> = vec![];
 
         while !self.out_of_tokens() && self.assert_current_token(&Token::RBrace).is_err() {
             consequences.push(self.parse_statement()?);
@@ -241,7 +241,7 @@ impl Parser {
         Ok(BlockStatement::new(consequences))
     }
 
-    fn parse_function_expression(&mut self) -> anyhow::Result<Box<dyn Expression>> {
+    fn parse_function_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         self.move_pointer();
 
         let parameters = self.parse_parameters()?;

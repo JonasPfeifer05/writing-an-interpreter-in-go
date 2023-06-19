@@ -10,11 +10,11 @@ use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation, Un
 use crate::evaluate::evaluate::eval_all;
 use crate::lexer::token::Token;
 
-pub trait CloneAsExpression {
-    fn clone_as_expression(&self) -> Box<dyn Expression>;
+pub trait CloneAsExpression: Send + Sync {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync>;
 }
 
-pub trait Expression: Display + Debug + Evaluate + CloneAsExpression {}
+pub trait Expression: Display + Debug + Evaluate + CloneAsExpression + Send + Sync{}
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct Identifier {
@@ -35,7 +35,7 @@ impl Evaluate for Identifier {
 }
 
 impl CloneAsExpression for Identifier {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         Box::new(Identifier::new(self.value.clone()))
     }
 }
@@ -66,7 +66,7 @@ impl Evaluate for Integer {
 }
 
 impl CloneAsExpression for Integer {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         Box::new(Integer::new(self.val.clone()))
     }
 }
@@ -97,7 +97,7 @@ impl Evaluate for Boolean {
 }
 
 impl CloneAsExpression for Boolean {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         Box::new(Boolean::new(self.val))
     }
 }
@@ -113,11 +113,11 @@ impl Display for Boolean {
 #[derive(Debug)]
 pub struct PrefixExpression {
     prefix: Token,
-    right: Box<dyn Expression>,
+    right: Box<dyn Expression + Send + Sync>,
 }
 
 impl PrefixExpression {
-    pub fn new(prefix: Token, right: Box<dyn Expression>) -> Self {
+    pub fn new(prefix: Token, right: Box<dyn Expression + Send + Sync>) -> Self {
         Self { prefix, right }
     }
 }
@@ -144,7 +144,7 @@ impl Evaluate for PrefixExpression {
 }
 
 impl CloneAsExpression for PrefixExpression {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         Box::new(PrefixExpression::new(self.prefix.clone(), self.right.clone_as_expression()))
     }
 }
@@ -159,13 +159,13 @@ impl Display for PrefixExpression {
 
 #[derive(Debug)]
 pub struct InfixExpression {
-    left: Box<dyn Expression>,
+    left: Box<dyn Expression + Send + Sync>,
     operator: Token,
-    right: Box<dyn Expression>,
+    right: Box<dyn Expression + Send + Sync>,
 }
 
 impl InfixExpression {
-    pub fn new(left: Box<dyn Expression>, operator: Token, right: Box<dyn Expression>) -> Self {
+    pub fn new(left: Box<dyn Expression + Send + Sync>, operator: Token, right: Box<dyn Expression + Send + Sync>) -> Self {
         Self { left, operator, right }
     }
 }
@@ -240,7 +240,7 @@ impl Evaluate for InfixExpression {
 }
 
 impl CloneAsExpression for InfixExpression {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         Box::new(InfixExpression::new(self.left.clone_as_expression(), self.operator.clone(), self.right.clone_as_expression()))
     }
 }
@@ -255,13 +255,13 @@ impl Display for InfixExpression {
 
 #[derive(Debug)]
 pub struct IfExpression {
-    condition: Box<dyn Expression>,
+    condition: Box<dyn Expression + Send + Sync>,
     consequence: BlockStatement,
     alternative: Option<BlockStatement>,
 }
 
 impl IfExpression {
-    pub fn new(condition: Box<dyn Expression>, consequence: BlockStatement, alternative: Option<BlockStatement>) -> Self {
+    pub fn new(condition: Box<dyn Expression + Send + Sync>, consequence: BlockStatement, alternative: Option<BlockStatement>) -> Self {
         Self { condition, consequence, alternative }
     }
 }
@@ -285,7 +285,7 @@ impl Evaluate for IfExpression {
 }
 
 impl CloneAsExpression for IfExpression {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         let alt = if let Some(alt) = &self.alternative {
             Some(alt.clone_as_block_statement())
         } else { None };
@@ -324,7 +324,7 @@ impl Evaluate for FunctionExpression {
 }
 
 impl CloneAsExpression for FunctionExpression {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         Box::new(FunctionExpression::new(self.parameters.clone(), self.body.clone_as_block_statement()))
     }
 }
@@ -345,12 +345,12 @@ impl Display for FunctionExpression {
 
 #[derive(Debug)]
 pub struct CallExpression {
-    function: Box<dyn Expression>,
-    arguments: Vec<Box<dyn Expression>>,
+    function: Box<dyn Expression + Send + Sync>,
+    arguments: Vec<Box<dyn Expression + Send + Sync>>,
 }
 
 impl CallExpression {
-    pub fn new(function: Box<dyn Expression>, arguments: Vec<Box<dyn Expression>>) -> Self {
+    pub fn new(function: Box<dyn Expression + Send + Sync>, arguments: Vec<Box<dyn Expression + Send + Sync>>) -> Self {
         Self { function, arguments }
     }
 }
@@ -362,7 +362,7 @@ impl Evaluate for CallExpression {
 }
 
 impl CloneAsExpression for CallExpression {
-    fn clone_as_expression(&self) -> Box<dyn Expression> {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
         let mut args = vec![];
         for arg in &self.arguments {
             args.push(arg.clone_as_expression())

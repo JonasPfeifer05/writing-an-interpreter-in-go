@@ -8,19 +8,19 @@ use crate::evaluate::object::{Evaluate, Object};
 use crate::evaluate::object::Object::Return;
 use crate::lexer::token::Token;
 
-pub trait CloneAsStatement {
-    fn clone_as_statement(&self) -> Box<dyn Statement>;
+pub trait CloneAsStatement: Send {
+    fn clone_as_statement(&self) -> Box<dyn Statement + Send + Sync>;
 }
 
-pub trait Statement: Display + Debug + Evaluate + CloneAsStatement {}
+pub trait Statement: Display + Debug + Evaluate + CloneAsStatement + Send + Sync {}
 
 #[derive(Debug)]
 pub struct LetStatement {
     name: Identifier,
-    value: Box<dyn Expression>,
+    value: Box<dyn Expression + Send + Sync>,
 }
 impl LetStatement {
-    pub fn new(name: Identifier, value: Box<dyn Expression>) -> Self {
+    pub fn new(name: Identifier, value: Box<dyn Expression + Send + Sync>) -> Self {
         Self { name, value }
     }
 }
@@ -34,7 +34,7 @@ impl Evaluate for LetStatement {
 }
 
 impl CloneAsStatement for LetStatement {
-    fn clone_as_statement(&self) -> Box<dyn Statement> {
+    fn clone_as_statement(&self) -> Box<dyn Statement + Send + Sync> {
         Box::new(LetStatement::new(self.name.clone(), self.value.clone_as_expression()))
     }
 }
@@ -49,10 +49,10 @@ impl Display for LetStatement {
 
 #[derive(Debug)]
 pub struct ReturnStatement {
-    value: Box<dyn Expression>,
+    value: Box<dyn Expression + Send + Sync>,
 }
 impl ReturnStatement {
-    pub fn new(value: Box<dyn Expression>) -> Self {
+    pub fn new(value: Box<dyn Expression + Send + Sync>) -> Self {
         Self { value }
     }
 }
@@ -64,7 +64,7 @@ impl Evaluate for ReturnStatement {
 }
 
 impl CloneAsStatement for ReturnStatement {
-    fn clone_as_statement(&self) -> Box<dyn Statement> {
+    fn clone_as_statement(&self) -> Box<dyn Statement + Send + Sync> {
         Box::new(ReturnStatement::new(self.value.clone_as_expression()))
     }
 }
@@ -80,10 +80,10 @@ impl Display for ReturnStatement {
 #[derive(Debug)]
 pub struct ExpressionStatement {
     token: Token,
-    expression: Box<dyn Expression>,
+    expression: Box<dyn Expression + Send + Sync>,
 }
 impl ExpressionStatement {
-    pub fn new(token: Token, expression: Box<dyn Expression>) -> Self {
+    pub fn new(token: Token, expression: Box<dyn Expression + Send + Sync>) -> Self {
         Self { token, expression }
     }
 }
@@ -95,7 +95,7 @@ impl Evaluate for ExpressionStatement {
 }
 
 impl CloneAsStatement for ExpressionStatement {
-    fn clone_as_statement(&self) -> Box<dyn Statement> {
+    fn clone_as_statement(&self) -> Box<dyn Statement + Send + Sync> {
         Box::new(ExpressionStatement::new(self.token.clone(), self.expression.clone_as_expression()))
     }
 }
@@ -110,15 +110,15 @@ impl Display for ExpressionStatement {
 
 #[derive(Debug)]
 pub struct BlockStatement {
-    statements: Vec<Box<dyn Statement>>
+    statements: Vec<Box<dyn Statement + Send + Sync>>
 }
 impl BlockStatement {
-    pub fn new(statements: Vec<Box<dyn Statement>>) -> Self {
+    pub fn new(statements: Vec<Box<dyn Statement + Send + Sync>>) -> Self {
         Self { statements }
     }
 
 
-    pub fn statements(&self) -> &Vec<Box<dyn Statement>> {
+    pub fn statements(&self) -> &Vec<Box<dyn Statement + Send + Sync>> {
         &self.statements
     }
 
@@ -135,7 +135,7 @@ impl Evaluate for BlockStatement {
 }
 
 impl CloneAsStatement for BlockStatement {
-    fn clone_as_statement(&self) -> Box<dyn Statement> {
+    fn clone_as_statement(&self) -> Box<dyn Statement + Send + Sync> {
         let statements: Vec<_> = self.statements.iter().map(|x| x.clone_as_statement()).collect();
         Box::new(BlockStatement::new(statements))
     }

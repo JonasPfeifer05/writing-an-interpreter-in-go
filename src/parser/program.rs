@@ -5,16 +5,16 @@ use crate::ast::statement::Statement;
 
 #[derive(Default, Debug)]
 pub struct Program {
-    statements: Vec<Box<dyn Statement>>,
+    statements: Vec<Box<dyn Statement + Send + Sync>>,
 }
 
 impl Program {
-    pub fn add_statement(&mut self, statement: Box<dyn Statement>) {
+    pub fn add_statement(&mut self, statement: Box<dyn Statement + Sync + Send>) {
         self.statements.push(statement);
     }
 
 
-    pub fn statements(&self) -> &Vec<Box<dyn Statement>> {
+    pub fn statements(&self) -> &Vec<Box<dyn Statement + Sync + Send>> {
         &self.statements
     }
 }
