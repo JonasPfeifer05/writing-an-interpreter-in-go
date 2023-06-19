@@ -316,10 +316,10 @@ impl Evaluate for IfExpression {
         };
 
         if condition {
-            eval_all(self.consequence.statements(), environment, true)
+            eval_all(self.consequence.statements(), environment, false)
         }
         else if let Some(alternative) = &mut self.alternative {
-            eval_all(alternative.statements(),environment, true)
+            eval_all(alternative.statements(),environment, false)
         } else {
             Ok(Object::Null)
         }
@@ -437,8 +437,6 @@ impl Evaluate for CallExpression {
 
         if self.arguments.len() != function.parameters.len() { bail!(DifferentAmountOfArguments) }
 
-        println!("{:#?}", function);
-
         let mut env = environment.clone();
 
         for env_var in function.env.store().iter() {
@@ -450,8 +448,6 @@ impl Evaluate for CallExpression {
         for i in 0..self.arguments.len() {
             function.env.set(function.parameters[i].value.clone(), self.arguments[i].eval(environment)?)
         }
-
-        println!("{:#?}", function.env);
 
         eval_all(&mut function.body.statements(), &mut function.env, true)
     }

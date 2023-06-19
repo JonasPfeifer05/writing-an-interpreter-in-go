@@ -1,0 +1,6 @@
+let fibo = fn(n) {
+    if (n < 1) { ret -1; }
+    if (n == 1) { ret 1; }
+    if (n == 2) { ret 1; }
+    fibo(n-1) + fibo(n-2)
+};

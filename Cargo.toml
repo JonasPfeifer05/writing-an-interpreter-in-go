@@ -11,3 +11,4 @@ colored = "2.0.0"
 ctrlc = "3.4.0"
 anyhow = "1.0.71"
 thiserror = "1.0.40"
+clap = { version = "4.3.0", features = ["derive"] }
