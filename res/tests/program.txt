@@ -6,3 +6,8 @@ let fibo = fn(n) {
 };
 
 let add = fn(a,b) {a+b};
+
+let recApply = fn(n, x, func) {
+    if (n == 1) { ret func(x); }
+    func(recApply(n-1, x, func))
+};
