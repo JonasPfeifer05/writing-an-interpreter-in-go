@@ -6,6 +6,7 @@ use crate::ast::expression::{Boolean, CallExpression, Expression, FunctionExpres
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
+use crate::evaluate::environment::Environment;
 use crate::lexer::token::Token;
 use crate::parser::error::ParseError::UnexpectedToken;
 use crate::parser::error::ParseError::*;
@@ -248,7 +249,7 @@ impl Parser {
 
         let body = self.parse_block_statement()?;
 
-        Ok(Box::new(FunctionExpression::new(parameters, body)))
+        Ok(Box::new(FunctionExpression::new(parameters, body, Environment::default())))
     }
 
     fn parse_parameters(&mut self) -> anyhow::Result<Vec<Identifier>> {

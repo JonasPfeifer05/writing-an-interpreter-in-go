@@ -363,8 +363,8 @@ pub struct FunctionExpression {
 }
 
 impl FunctionExpression {
-    pub fn new(parameters: Vec<Identifier>, body: BlockStatement) -> Self {
-        Self { parameters, body, env: Default::default() }
+    pub fn new(parameters: Vec<Identifier>, body: BlockStatement, env: Environment) -> Self {
+        Self { parameters, body, env }
     }
 }
 
@@ -373,14 +373,14 @@ impl Evaluate for FunctionExpression {
         Ok(Object::Function {
             parameters: self.parameters.clone(),
             body: self.body.clone_as_block_statement(),
-            env: Environment::default(),
+            env: environment.clone(),
         })
     }
 }
 
 impl CloneAsExpression for FunctionExpression {
     fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
-        Box::new(FunctionExpression::new(self.parameters.clone(), self.body.clone_as_block_statement()))
+        Box::new(FunctionExpression::new(self.parameters.clone(), self.body.clone_as_block_statement(), Environment::default()))
     }
 }
 
@@ -426,23 +426,32 @@ impl Evaluate for CallExpression {
         let mut function = if self.function.expression_id() == TypeId::of::<Identifier>() {
             let function_object = environment.get(&self.function.to_string()).unwrap();
             Box::new(match function_object {
-                Object::Function { body, parameters, env } => FunctionExpression::new(parameters.clone(), body.clone_as_block_statement()),
+                Object::Function { body, parameters, env } => FunctionExpression::new(parameters.clone(), body.clone_as_block_statement(), env.clone()),
                 _ => bail!(CannotCallNoneFunctinal)
             })
         } else {
             self.function.clone_as_expression()
         };
 
-        println!("{:?}", function);
-
         let function = function.as_any().downcast_mut::<FunctionExpression>().unwrap();
 
         if self.arguments.len() != function.parameters.len() { bail!(DifferentAmountOfArguments) }
 
-        function.env.reset();
+        println!("{:#?}", function);
+
+        let mut env = environment.clone();
+
+        for env_var in function.env.store().iter() {
+            env.set(env_var.0.clone(), env_var.1.clone());
+        }
+
+        function.env = env;
+
         for i in 0..self.arguments.len() {
             function.env.set(function.parameters[i].value.clone(), self.arguments[i].eval(environment)?)
         }
+
+        println!("{:#?}", function.env);
 
         eval_all(&mut function.body.statements(), &mut function.env, true)
     }
