@@ -2,16 +2,21 @@
 
 use std::fmt::{Debug, Display, format, Formatter};
 use anyhow::bail;
+use crate::ast::precedences::Precedences::{Call, Prefix};
 use crate::evaluate::object::{Evaluate, Object};
-use crate::ast::statement::{BlockStatement, Statement};
-use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation, UnexpectedObject};
+use crate::ast::statement::{BlockStatement, CloneAsStatement, Statement};
+use crate::evaluate::environment::Environment;
+use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation, UnexpectedObject, UnknownIdentifier};
 use crate::evaluate::evaluate::eval_all;
 use crate::lexer::token::Token;
 
+pub trait CloneAsExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression>;
+}
 
-pub trait Expression: Display + Debug + Evaluate {}
+pub trait Expression: Display + Debug + Evaluate + CloneAsExpression {}
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct Identifier {
     value: String,
 }
@@ -23,8 +28,15 @@ impl Identifier {
 }
 
 impl Evaluate for Identifier {
-    fn eval(&self) -> anyhow::Result<Object> {
-        todo!()
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let result = environment.get(&self.value).ok_or(UnknownIdentifier(self.value.clone()))?;
+        Ok(result.clone())
+    }
+}
+
+impl CloneAsExpression for Identifier {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        Box::new(Identifier::new(self.value.clone()))
     }
 }
 
@@ -48,8 +60,14 @@ impl Integer {
 }
 
 impl Evaluate for Integer {
-    fn eval(&self) -> anyhow::Result<Object> {
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Int(self.val.parse()?))
+    }
+}
+
+impl CloneAsExpression for Integer {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        Box::new(Integer::new(self.val.clone()))
     }
 }
 
@@ -73,8 +91,14 @@ impl Boolean {
 }
 
 impl Evaluate for Boolean {
-    fn eval(&self) -> anyhow::Result<Object> {
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Bool(self.val))
+    }
+}
+
+impl CloneAsExpression for Boolean {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        Box::new(Boolean::new(self.val))
     }
 }
 
@@ -99,8 +123,8 @@ impl PrefixExpression {
 }
 
 impl Evaluate for PrefixExpression {
-    fn eval(&self) -> anyhow::Result<Object> {
-        let val = self.right.eval()?;
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let val = self.right.eval(environment)?;
         Ok(match self.prefix {
             Token::Minus => {
                 match val {
@@ -116,6 +140,12 @@ impl Evaluate for PrefixExpression {
             }
             _ => unreachable!(),
         })
+    }
+}
+
+impl CloneAsExpression for PrefixExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        Box::new(PrefixExpression::new(self.prefix.clone(), self.right.clone_as_expression()))
     }
 }
 
@@ -141,9 +171,9 @@ impl InfixExpression {
 }
 
 impl Evaluate for InfixExpression {
-    fn eval(&self) -> anyhow::Result<Object> {
-        let left = self.left.eval()?;
-        let right = self.right.eval()?;
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let left = self.left.eval(environment)?;
+        let right = self.right.eval(environment)?;
 
         if !Object::variant_is_equal(&left, &right) { bail!(MixedTypeOperation(self.operator.clone(), left, right)) }
 
@@ -209,6 +239,12 @@ impl Evaluate for InfixExpression {
     }
 }
 
+impl CloneAsExpression for InfixExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        Box::new(InfixExpression::new(self.left.clone_as_expression(), self.operator.clone(), self.right.clone_as_expression()))
+    }
+}
+
 impl Expression for InfixExpression {}
 
 impl Display for InfixExpression {
@@ -231,20 +267,29 @@ impl IfExpression {
 }
 
 impl Evaluate for IfExpression {
-    fn eval(&self) -> anyhow::Result<Object> {
-        let condition = match self.condition.eval()? {
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let condition = match self.condition.eval(environment)? {
             Object::Bool(val) => val,
             _ => bail!(UnexpectedObject("Boolean".to_string()))
         };
 
         if condition {
-            eval_all(self.consequence.statements())
+            eval_all(self.consequence.statements(), environment)
         }
         else if let Some(alternative) = &self.alternative {
-            eval_all(alternative.statements())
+            eval_all(alternative.statements(),environment)
         } else {
             Ok(Object::Null)
         }
+    }
+}
+
+impl CloneAsExpression for IfExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        let alt = if let Some(alt) = &self.alternative {
+            Some(alt.clone_as_block_statement())
+        } else { None };
+        Box::new(IfExpression::new(self.condition.clone_as_expression(), self.consequence.clone_as_block_statement(), alt))
     }
 }
 
@@ -273,8 +318,14 @@ impl FunctionExpression {
 }
 
 impl Evaluate for FunctionExpression {
-    fn eval(&self) -> anyhow::Result<Object> {
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
         todo!()
+    }
+}
+
+impl CloneAsExpression for FunctionExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        Box::new(FunctionExpression::new(self.parameters.clone(), self.body.clone_as_block_statement()))
     }
 }
 
@@ -305,8 +356,18 @@ impl CallExpression {
 }
 
 impl Evaluate for CallExpression {
-    fn eval(&self) -> anyhow::Result<Object> {
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
         todo!()
+    }
+}
+
+impl CloneAsExpression for CallExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression> {
+        let mut args = vec![];
+        for arg in &self.arguments {
+            args.push(arg.clone_as_expression())
+        }
+        Box::new(CallExpression::new(self.function.clone_as_expression(), args))
     }
 }
 

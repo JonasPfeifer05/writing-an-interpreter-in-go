@@ -2,7 +2,6 @@ use crate::evaluate::object::Object;
 use crate::lexer::token::Token;
 
 use thiserror::Error;
-use crate::ast::expression::Expression;
 
 #[derive(Error, Debug)]
 pub enum EvalError {
@@ -12,4 +11,6 @@ pub enum EvalError {
     MixedTypeOperation(Token, Object, Object),
     #[error("Expected {0}!")]
     UnexpectedObject(String),
+    #[error("Found unknown identifier {0}!")]
+    UnknownIdentifier(String)
 }

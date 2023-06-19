@@ -1,5 +1,6 @@
 use std::io::{BufRead, stdin, stdout, Write};
 use colored::Colorize;
+use crate::evaluate::environment::Environment;
 use crate::evaluate::evaluate::eval_program;
 use crate::lexer::lexer::Lexer;
 use crate::parser::parser::Parser;
@@ -14,6 +15,8 @@ pub fn start_repl() {
         print!("\r{}\n{PROMPT}", "Please enter 'exit' to leave the application!".red());
         stdout().lock().flush().expect("Error while flushing stdout!");
     }).expect("Failed to set CTRL + C handler!");
+    
+    let mut environment = Environment::default();
 
     println!("{}", "Welcome to ...! Just type in your commands:".green());
     loop {
@@ -43,7 +46,7 @@ pub fn start_repl() {
         if let Ok(program) = program {
             println!("{:#?}", program);
             println!("{}", program);
-            let result =  eval_program(program);
+            let result =  eval_program(program, &mut environment);
             if let Ok(result) = result {
                 println!("{}", result);
             } else if let Err(err) = result {

@@ -2,11 +2,17 @@
 
 use std::fmt::{Debug, Display, format, Formatter};
 use crate::ast::expression::{Expression, Identifier};
+use crate::evaluate::environment::Environment;
 use crate::evaluate::evaluate::eval_all;
 use crate::evaluate::object::{Evaluate, Object};
+use crate::evaluate::object::Object::Return;
 use crate::lexer::token::Token;
 
-pub trait Statement: Display + Debug + Evaluate {}
+pub trait CloneAsStatement {
+    fn clone_as_statement(&self) -> Box<dyn Statement>;
+}
+
+pub trait Statement: Display + Debug + Evaluate + CloneAsStatement {}
 
 #[derive(Debug)]
 pub struct LetStatement {
@@ -20,8 +26,16 @@ impl LetStatement {
 }
 
 impl Evaluate for LetStatement {
-    fn eval(&self) -> anyhow::Result<Object> {
-        todo!()
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let val = self.value.eval(environment)?;
+        environment.set(self.name.to_string(), val.clone());
+        Ok(val)
+    }
+}
+
+impl CloneAsStatement for LetStatement {
+    fn clone_as_statement(&self) -> Box<dyn Statement> {
+        Box::new(LetStatement::new(self.name.clone(), self.value.clone_as_expression()))
     }
 }
 
@@ -44,8 +58,14 @@ impl ReturnStatement {
 }
 
 impl Evaluate for ReturnStatement {
-    fn eval(&self) -> anyhow::Result<Object> {
-        Ok(Object::Return(Box::new(self.value.eval()?)))
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        Ok(Object::Return(Box::new(self.value.eval(environment)?)))
+    }
+}
+
+impl CloneAsStatement for ReturnStatement {
+    fn clone_as_statement(&self) -> Box<dyn Statement> {
+        Box::new(ReturnStatement::new(self.value.clone_as_expression()))
     }
 }
 
@@ -69,8 +89,14 @@ impl ExpressionStatement {
 }
 
 impl Evaluate for ExpressionStatement {
-    fn eval(&self) -> anyhow::Result<Object> {
-        self.expression.eval()
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        self.expression.eval(environment)
+    }
+}
+
+impl CloneAsStatement for ExpressionStatement {
+    fn clone_as_statement(&self) -> Box<dyn Statement> {
+        Box::new(ExpressionStatement::new(self.token.clone(), self.expression.clone_as_expression()))
     }
 }
 
@@ -95,11 +121,23 @@ impl BlockStatement {
     pub fn statements(&self) -> &Vec<Box<dyn Statement>> {
         &self.statements
     }
+
+    pub fn clone_as_block_statement(&self) -> BlockStatement {
+        let statements: Vec<_> = self.statements.iter().map(|x| x.clone_as_statement()).collect();
+        BlockStatement::new(statements)
+    }
 }
 
 impl Evaluate for BlockStatement {
-    fn eval(&self) -> anyhow::Result<Object> {
-        eval_all(&self.statements)
+    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+        eval_all(&self.statements, environment)
+    }
+}
+
+impl CloneAsStatement for BlockStatement {
+    fn clone_as_statement(&self) -> Box<dyn Statement> {
+        let statements: Vec<_> = self.statements.iter().map(|x| x.clone_as_statement()).collect();
+        Box::new(BlockStatement::new(statements))
     }
 }
 
