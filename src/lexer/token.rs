@@ -12,6 +12,7 @@ pub enum Token {
     // Identifier and Types
     Ident(String),
     Int(String),
+    String(String),
 
     // Arithmetic Operations
     Assign,
@@ -54,6 +55,7 @@ impl Token {
         match self {
             Token::Ident(val) => val.clone(),
             Token::Int(val) => val.clone(),
+            Token::String(val) => val.clone(),
             _ => { unreachable!("Should never want the value of this token!") }
         }
     }
@@ -71,6 +73,7 @@ impl Display for Token {
 
             Token::Ident(name) => name.as_str(),
             Token::Int(val) => val.as_str(),
+            Token::String(val) => val.as_str(),
 
             Token::Assign => "=",
             Token::Plus => "+",
@@ -115,6 +118,7 @@ impl Debug for Token {
 
             Token::Ident(name) => name.as_str(),
             Token::Int(val) => val.as_str(),
+            Token::String(val) => val.as_str(),
 
             Token::Assign => "=",
             Token::Plus => "+",

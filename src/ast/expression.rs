@@ -1,6 +1,7 @@
 use std::any::{Any, TypeId};
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 use anyhow::bail;
+use crate::evaluate::build_in::BuildInFunction;
 
 use crate::evaluate::object::{Evaluate, Object};
 use crate::ast::statement::{BlockStatement};
@@ -31,6 +32,9 @@ impl Identifier {
 
 impl Evaluate for Identifier {
     fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        if let Some(build_in) = environment.get_build_in(&self.value) {
+            return Ok(build_in.clone());
+        }
         let result = environment.get(&self.value).ok_or(UnknownIdentifier(self.value.clone()))?;
         Ok(result.clone())
     }
@@ -94,6 +98,45 @@ impl Expression for Integer {
 impl Display for Integer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.val)
+    }
+}
+
+#[derive(Debug)]
+pub struct StringExpression {
+    val: String
+}
+
+impl StringExpression {
+    pub fn new(val: String) -> Self {
+        Self { val }
+    }
+}
+
+impl Display for StringExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("\"{}\"", self.val))
+    }
+}
+
+impl Evaluate for StringExpression {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        Ok(Object::String(self.val.clone()))
+    }
+}
+
+impl CloneAsExpression for StringExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
+        Box::new(StringExpression::new(self.val.clone()))
+    }
+}
+
+impl Expression for StringExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<StringExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -212,7 +255,13 @@ impl Evaluate for InfixExpression {
         if !Object::variant_is_equal(&left, &right) { bail!(MixedTypeOperation(self.operator.clone(), left, right)) }
 
         match self.operator {
-            Token::Plus |
+            Token::Plus => {
+                match left {
+                    Object::Int(_) => {},
+                    Object::String(_) => {},
+                    _ => bail!(IllegalOperation(self.operator.clone(), left))
+                }
+            }
             Token::Minus |
             Token::Asterisk |
             Token::Slash |
@@ -229,6 +278,7 @@ impl Evaluate for InfixExpression {
             Token::NotEqual => match left {
                 Object::Int(_) => {}
                 Object::Bool(_) => {}
+                Object::String(_) => {}
                 _ => bail!(IllegalOperation(self.operator.clone(), left))
             },
             _ => unreachable!()
@@ -251,17 +301,31 @@ impl Evaluate for InfixExpression {
             _ => None,
         };
 
+        let left_string = match left {
+            Object::String(val) => Some(val),
+            _ => None,
+        };
+        let right_string = match right {
+            Object::String(val) => Some(val),
+            _ => None,
+        };
+
         Ok(match self.operator {
-            Token::Plus => Object::Int(left_int.unwrap() + right_int.unwrap()),
+            Token::Plus => {
+                if left_int.is_some() { Object::Int(left_int.unwrap() + right_int.unwrap())  }
+                else { Object::String(format!("{}{}", left_string.unwrap(), right_string.unwrap())) }
+            },
             Token::Minus => Object::Int(left_int.unwrap() - right_int.unwrap()),
             Token::Asterisk => Object::Int(left_int.unwrap() * right_int.unwrap()),
             Token::Slash => Object::Int(left_int.unwrap() / right_int.unwrap()),
             Token::Equal => Object::Bool({
                 if left_bool.is_some() { left_bool.unwrap() == right_bool.unwrap()  }
+                else if left_string.is_some() { left_string.unwrap() == right_string.unwrap()  }
                 else { left_int.unwrap() == right_int.unwrap() }
             }),
             Token::NotEqual => Object::Bool({
                 if left_bool.is_some() { left_bool.unwrap() != right_bool.unwrap()  }
+                else if left_string.is_some() { left_string.unwrap() != right_string.unwrap()  }
                 else { left_int.unwrap() != right_int.unwrap() }
             }),
             Token::Lt => Object::Bool(left_int.unwrap() < right_int.unwrap()),
@@ -420,36 +484,61 @@ impl CallExpression {
 
 impl Evaluate for CallExpression {
     fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
-        if self.function.expression_id() != TypeId::of::<FunctionExpression>()
-        && self.function.expression_id() != TypeId::of::<Identifier>() { bail!(CannotCallNoneFunctinal) }
+        let func = self.function.eval(environment)?;
 
-        let mut function = if self.function.expression_id() == TypeId::of::<Identifier>() {
-            let function_object = environment.get(&self.function.to_string()).unwrap();
-            Box::new(match function_object {
-                Object::Function { body, parameters, env } => FunctionExpression::new(parameters.clone(), body.clone_as_block_statement(), env.clone()),
-                _ => bail!(CannotCallNoneFunctinal)
-            })
-        } else {
-            self.function.clone_as_expression()
-        };
+        match func {
+            Object::Function { parameters, mut body, env } => {
+                if self.arguments.len() != parameters.len() { bail!(DifferentAmountOfArguments) }
 
-        let function = function.as_any().downcast_mut::<FunctionExpression>().unwrap();
+                let mut env_extended = environment.clone();
 
-        if self.arguments.len() != function.parameters.len() { bail!(DifferentAmountOfArguments) }
+                for env_var in env.store().iter() {
+                    env_extended.set(env_var.0.clone(), env_var.1.clone());
+                }
 
-        let mut env = environment.clone();
+                for i in 0..self.arguments.len() {
+                    env_extended.set(parameters[i].value.clone(), self.arguments[i].eval(environment)?)
+                }
 
-        for env_var in function.env.store().iter() {
-            env.set(env_var.0.clone(), env_var.1.clone());
+                eval_all(&mut body.statements(), &mut env_extended, true)
+            }
+            Object::BuildIn(mut build_in) => {
+                let mut args = vec![];
+                for arg in &mut self.arguments {
+                    args.push(arg.eval(environment)?)
+                }
+                build_in.eval(args)
+            }
+            _ => bail!(CannotCallNoneFunctinal),
         }
 
-        function.env = env;
-
-        for i in 0..self.arguments.len() {
-            function.env.set(function.parameters[i].value.clone(), self.arguments[i].eval(environment)?)
-        }
-
-        eval_all(&mut function.body.statements(), &mut function.env, true)
+        // let mut function = if self.function.expression_id() == TypeId::of::<Identifier>() {
+        //     let function_object = self.function.eval(environment)?;
+        //     Box::new(match function_object {
+        //         Object::Function { body, parameters, env } => FunctionExpression::new(parameters.clone(), body.clone_as_block_statement(), env.clone()),
+        //         _ => bail!(CannotCallNoneFunctinal)
+        //     })
+        // } else {
+        //     self.function.clone_as_expression()
+        // };
+        //
+        // let function = function.as_any().downcast_mut::<FunctionExpression>().unwrap();
+        //
+        // if self.arguments.len() != function.parameters.len() { bail!(DifferentAmountOfArguments) }
+        //
+        // let mut env = environment.clone();
+        //
+        // for env_var in function.env.store().iter() {
+        //     env.set(env_var.0.clone(), env_var.1.clone());
+        // }
+        //
+        // function.env = env;
+        //
+        // for i in 0..self.arguments.len() {
+        //     function.env.set(function.parameters[i].value.clone(), self.arguments[i].eval(environment)?)
+        // }
+        //
+        // eval_all(&mut function.body.statements(), &mut function.env, true)
     }
 }
 

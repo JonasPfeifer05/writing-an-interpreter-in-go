@@ -119,6 +119,8 @@ impl Lexer {
             ',' => Token::Comma,
             ';' => Token::Semicolon,
 
+            '"' => Token::String(self.read_string()),
+
             c if self.identifier_regex.is_match(c.to_string().as_str()) => {
                 let ident = self.read_identifier();
                 let keyword = self.keywords.get(&ident);
@@ -132,6 +134,19 @@ impl Lexer {
         self.move_pointer();
 
         Some(token)
+    }
+
+    fn read_string(&mut self) -> String {
+        self.move_pointer();
+
+        let mut buf = String::new();
+
+        while !self.out_of_chars() && self.current_char().unwrap() != &'"' {
+           buf.push(self.current_char().unwrap().clone());
+            self.move_pointer();
+        }
+
+        buf
     }
 
     /// Read an integer from the program as long as possible

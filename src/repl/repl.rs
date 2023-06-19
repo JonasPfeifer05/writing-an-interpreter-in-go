@@ -26,14 +26,14 @@ pub fn start_repl() {
         let mut lexer = Lexer::new(&mut program);
         let tokens = lexer.generate_tokens();
 
-        // let mut tokens_string = String::new();
-        // for token in &tokens {
-        //     tokens_string.push_str(&token.to_string());
-        //     tokens_string.push(',');
-        // }
-        // tokens_string.pop();
+        let mut tokens_string = String::new();
+        for token in &tokens {
+            tokens_string.push_str(&token.to_string());
+            tokens_string.push(',');
+        }
+        tokens_string.pop();
 
-        // println!("{}", format!("{}", tokens_string).bright_blue());
+        println!("{}", format!("{}", tokens_string).bright_blue());
 
         let mut parser = Parser::new(tokens);
         let program = parser.parse();
@@ -72,14 +72,14 @@ pub fn start_repl() {
         let mut lexer = Lexer::new(&mut input_buffer);
         let tokens = lexer.generate_tokens();
 
-        // let mut tokens_string = String::new();
-        // for token in &tokens {
-        //     tokens_string.push_str(&token.to_string());
-        //     tokens_string.push(',');
-        // }
-        // tokens_string.pop();
-        //
-        // println!("{}", format!("{}", tokens_string).bright_blue());
+        let mut tokens_string = String::new();
+        for token in &tokens {
+            tokens_string.push_str(&token.to_string());
+            tokens_string.push(',');
+        }
+        tokens_string.pop();
+
+        println!("{}", format!("{}", tokens_string).bright_blue());
 
         let mut parser = Parser::new(tokens);
         let program = parser.parse();

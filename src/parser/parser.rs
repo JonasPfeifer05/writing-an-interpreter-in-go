@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use anyhow::bail;
-use crate::ast::expression::{Boolean, CallExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression};
+use crate::ast::expression::{Boolean, CallExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -100,12 +100,25 @@ impl Parser {
         Ok(int)
     }
 
+    fn parse_string(&mut self) -> anyhow::Result<StringExpression> {
+        if self.out_of_tokens() { bail!(RanOutOfTokens) }
+
+        if self.assert_current_token(&Token::String("".to_string())).is_err() { bail!(UnexpectedToken(self.current_token().unwrap().clone())) }
+
+        let string = StringExpression::new(self.current_token().unwrap().value());
+
+        self.move_pointer();
+
+        Ok(string)
+    }
+
     fn parse_expression(&mut self, precedence: u8) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         if self.out_of_tokens() { bail!(RanOutOfTokens) }
 
         let mut left_expr: anyhow::Result<Box<dyn Expression + Send + Sync>> = match self.current_token().unwrap() {
             Token::Ident(_) => self.parse_identifier().map(|x| Box::new(x) as Box<dyn Expression + Send + Sync>),
-            Token::Int(_) => self.parse_integer().map(|x| Box::new(x) as Box<dyn Expression + Send + Sync>),
+            Token::Int(val) => self.parse_integer().map(|x| Box::new(x) as Box<dyn Expression + Send + Sync>),
+            Token::String(_) => self.parse_string().map(|x| Box::new(x) as Box<dyn Expression + Send + Sync>),
             Token::True => {
                 self.move_pointer();
                 Ok(Box::new(Boolean::new(true)))
