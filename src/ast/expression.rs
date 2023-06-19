@@ -1,9 +1,9 @@
 use std::any::{Any, TypeId};
-use std::fmt::{Debug, Display, format, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use anyhow::bail;
-use crate::ast::precedences::Precedences::{Call, Prefix};
+
 use crate::evaluate::object::{Evaluate, Object};
-use crate::ast::statement::{BlockStatement, CloneAsStatement, Statement};
+use crate::ast::statement::{BlockStatement};
 use crate::evaluate::environment::Environment;
 use crate::evaluate::error::EvalError::{CannotCallNoneFunctinal, DifferentAmountOfArguments, IllegalOperation, MixedTypeOperation, UnexpectedObject, UnknownIdentifier};
 use crate::evaluate::evaluate::eval_all;
@@ -70,7 +70,7 @@ impl Integer {
 }
 
 impl Evaluate for Integer {
-    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, _environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Int(self.val.parse()?))
     }
 }
@@ -109,7 +109,7 @@ impl Boolean {
 }
 
 impl Evaluate for Boolean {
-    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, _environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Bool(self.val))
     }
 }

@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use crate::ast::expression::Identifier;
 use crate::ast::statement::BlockStatement;
 use crate::evaluate::environment::Environment;
-use crate::evaluate::evaluate::eval;
+
 
 pub trait Evaluate {
     fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object>;

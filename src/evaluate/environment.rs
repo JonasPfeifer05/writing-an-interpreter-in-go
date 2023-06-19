@@ -15,11 +15,6 @@ impl Environment {
         self.store.insert(identifier, object);
     }
 
-    pub fn reset(&mut self) {
-        self.store.clear();
-    }
-
-
     pub fn store(&self) -> &HashMap<String, Object> {
         &self.store
     }

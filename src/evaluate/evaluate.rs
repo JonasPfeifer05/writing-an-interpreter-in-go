@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::ast::statement::Statement;
 use crate::evaluate::environment::Environment;
 use crate::evaluate::object::Object;
