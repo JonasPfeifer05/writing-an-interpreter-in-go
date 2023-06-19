@@ -12,5 +12,9 @@ pub enum EvalError {
     #[error("Expected {0}!")]
     UnexpectedObject(String),
     #[error("Found unknown identifier {0}!")]
-    UnknownIdentifier(String)
+    UnknownIdentifier(String),
+    #[error("You cannot call non functional literals!")]
+    CannotCallNoneFunctinal,
+    #[error("Argument and Parameter count do not match!")]
+    DifferentAmountOfArguments
 }

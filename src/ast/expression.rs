@@ -1,12 +1,11 @@
-#![allow(unused)]
-
+use std::any::{Any, TypeId};
 use std::fmt::{Debug, Display, format, Formatter};
 use anyhow::bail;
 use crate::ast::precedences::Precedences::{Call, Prefix};
 use crate::evaluate::object::{Evaluate, Object};
 use crate::ast::statement::{BlockStatement, CloneAsStatement, Statement};
 use crate::evaluate::environment::Environment;
-use crate::evaluate::error::EvalError::{IllegalOperation, MixedTypeOperation, UnexpectedObject, UnknownIdentifier};
+use crate::evaluate::error::EvalError::{CannotCallNoneFunctinal, DifferentAmountOfArguments, IllegalOperation, MixedTypeOperation, UnexpectedObject, UnknownIdentifier};
 use crate::evaluate::evaluate::eval_all;
 use crate::lexer::token::Token;
 
@@ -14,7 +13,10 @@ pub trait CloneAsExpression: Send + Sync {
     fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync>;
 }
 
-pub trait Expression: Display + Debug + Evaluate + CloneAsExpression + Send + Sync{}
+pub trait Expression: Display + Debug + Evaluate + CloneAsExpression + Send + Sync {
+    fn expression_id(&self) -> TypeId;
+    fn as_any(&mut self) -> &mut dyn Any;
+}
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct Identifier {
@@ -28,7 +30,7 @@ impl Identifier {
 }
 
 impl Evaluate for Identifier {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         let result = environment.get(&self.value).ok_or(UnknownIdentifier(self.value.clone()))?;
         Ok(result.clone())
     }
@@ -40,7 +42,15 @@ impl CloneAsExpression for Identifier {
     }
 }
 
-impl Expression for Identifier {}
+impl Expression for Identifier {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<Identifier>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for Identifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -60,7 +70,7 @@ impl Integer {
 }
 
 impl Evaluate for Integer {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Int(self.val.parse()?))
     }
 }
@@ -71,7 +81,15 @@ impl CloneAsExpression for Integer {
     }
 }
 
-impl Expression for Integer {}
+impl Expression for Integer {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<Integer>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for Integer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -91,7 +109,7 @@ impl Boolean {
 }
 
 impl Evaluate for Boolean {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Bool(self.val))
     }
 }
@@ -102,7 +120,15 @@ impl CloneAsExpression for Boolean {
     }
 }
 
-impl Expression for Boolean {}
+impl Expression for Boolean {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<Boolean>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for Boolean {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -123,7 +149,7 @@ impl PrefixExpression {
 }
 
 impl Evaluate for PrefixExpression {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         let val = self.right.eval(environment)?;
         Ok(match self.prefix {
             Token::Minus => {
@@ -149,7 +175,15 @@ impl CloneAsExpression for PrefixExpression {
     }
 }
 
-impl Expression for PrefixExpression {}
+impl Expression for PrefixExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<PrefixExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for PrefixExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -171,7 +205,7 @@ impl InfixExpression {
 }
 
 impl Evaluate for InfixExpression {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         let left = self.left.eval(environment)?;
         let right = self.right.eval(environment)?;
 
@@ -245,7 +279,15 @@ impl CloneAsExpression for InfixExpression {
     }
 }
 
-impl Expression for InfixExpression {}
+impl Expression for InfixExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<InfixExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for InfixExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -267,17 +309,17 @@ impl IfExpression {
 }
 
 impl Evaluate for IfExpression {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         let condition = match self.condition.eval(environment)? {
             Object::Bool(val) => val,
             _ => bail!(UnexpectedObject("Boolean".to_string()))
         };
 
         if condition {
-            eval_all(self.consequence.statements(), environment)
+            eval_all(self.consequence.statements(), environment, true)
         }
-        else if let Some(alternative) = &self.alternative {
-            eval_all(alternative.statements(),environment)
+        else if let Some(alternative) = &mut self.alternative {
+            eval_all(alternative.statements(),environment, true)
         } else {
             Ok(Object::Null)
         }
@@ -293,7 +335,15 @@ impl CloneAsExpression for IfExpression {
     }
 }
 
-impl Expression for IfExpression {}
+impl Expression for IfExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<IfExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for IfExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -309,17 +359,22 @@ impl Display for IfExpression {
 pub struct FunctionExpression {
     parameters: Vec<Identifier>,
     body: BlockStatement,
+    env: Environment,
 }
 
 impl FunctionExpression {
     pub fn new(parameters: Vec<Identifier>, body: BlockStatement) -> Self {
-        Self { parameters, body }
+        Self { parameters, body, env: Default::default() }
     }
 }
 
 impl Evaluate for FunctionExpression {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
-        todo!()
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        Ok(Object::Function {
+            parameters: self.parameters.clone(),
+            body: self.body.clone_as_block_statement(),
+            env: Environment::default(),
+        })
     }
 }
 
@@ -329,7 +384,15 @@ impl CloneAsExpression for FunctionExpression {
     }
 }
 
-impl Expression for FunctionExpression {}
+impl Expression for FunctionExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<FunctionExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for FunctionExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -356,8 +419,32 @@ impl CallExpression {
 }
 
 impl Evaluate for CallExpression {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
-        todo!()
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        if self.function.expression_id() != TypeId::of::<FunctionExpression>()
+        && self.function.expression_id() != TypeId::of::<Identifier>() { bail!(CannotCallNoneFunctinal) }
+
+        let mut function = if self.function.expression_id() == TypeId::of::<Identifier>() {
+            let function_object = environment.get(&self.function.to_string()).unwrap();
+            Box::new(match function_object {
+                Object::Function { body, parameters, env } => FunctionExpression::new(parameters.clone(), body.clone_as_block_statement()),
+                _ => bail!(CannotCallNoneFunctinal)
+            })
+        } else {
+            self.function.clone_as_expression()
+        };
+
+        println!("{:?}", function);
+
+        let function = function.as_any().downcast_mut::<FunctionExpression>().unwrap();
+
+        if self.arguments.len() != function.parameters.len() { bail!(DifferentAmountOfArguments) }
+
+        function.env.reset();
+        for i in 0..self.arguments.len() {
+            function.env.set(function.parameters[i].value.clone(), self.arguments[i].eval(environment)?)
+        }
+
+        eval_all(&mut function.body.statements(), &mut function.env, true)
     }
 }
 
@@ -371,7 +458,15 @@ impl CloneAsExpression for CallExpression {
     }
 }
 
-impl Expression for CallExpression {}
+impl Expression for CallExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<CallExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Display for CallExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

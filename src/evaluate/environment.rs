@@ -14,4 +14,8 @@ impl Environment {
     pub fn set(&mut self, identifier: String, object: Object) {
         self.store.insert(identifier, object);
     }
+
+    pub fn reset(&mut self) {
+        self.store.clear();
+    }
 }

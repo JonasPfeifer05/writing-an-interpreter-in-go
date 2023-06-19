@@ -3,26 +3,49 @@ use crate::evaluate::environment::Environment;
 use crate::evaluate::object::Object;
 use crate::parser::program::Program;
 
-pub fn eval_program(program: Program, environment: &mut Environment) -> anyhow::Result<Object> {
-    eval_all(program.statements(), environment)
+pub fn eval_program(mut program: Program, environment: &mut Environment) -> anyhow::Result<Object> {
+    eval_all(program.statements(), environment, true)
 }
 
-pub fn eval(statement: &Box<dyn Statement + Send + Sync>,environment: &mut Environment) -> anyhow::Result<Object> {
-    statement.eval(environment)
-}
-
-pub fn eval_all(statements: &Vec<Box<dyn Statement + Send + Sync>>, environment: &mut Environment) -> anyhow::Result<Object> {
-    if statements.is_empty() { return Ok(Object::Null) }
-
-    let mut result = eval(statements.first().unwrap(),environment)?;
-
-    for statement in statements.iter().skip(1) {
-        result = eval(statement, environment)?;
+pub fn eval(statement: &mut Box<dyn Statement + Send + Sync>, environment: &mut Environment, remove_ret: bool) -> anyhow::Result<Object> {
+    let mut result = statement.eval(environment)?;
+    if remove_ret {
         match result {
             Object::Return(val) => {
                 result = *val;
-                break
-            },
+            }
+            _ => {}
+        }
+    }
+    Ok(result)
+}
+
+pub fn eval_all(statements: &mut Vec<Box<dyn Statement + Send + Sync>>, environment: &mut Environment, remove_ret: bool) -> anyhow::Result<Object> {
+    if statements.is_empty() { return Ok(Object::Null); }
+
+    let mut result = eval(statements.first_mut().unwrap(), environment, false)?;
+
+    match result {
+        Object::Return(val) => {
+            return if remove_ret {
+                Ok(*val)
+            } else {
+                Ok(Object::Return(val))
+            };
+        }
+        _ => {}
+    }
+
+    for statement in statements.iter_mut().skip(1) {
+        result = eval(statement, environment, false)?;
+        match result {
+            Object::Return(val) => {
+                return if remove_ret {
+                    Ok(*val)
+                } else {
+                    Ok(Object::Return(val))
+                };
+            }
             _ => {}
         }
     }

@@ -26,7 +26,7 @@ impl LetStatement {
 }
 
 impl Evaluate for LetStatement {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         let val = self.value.eval(environment)?;
         environment.set(self.name.to_string(), val.clone());
         Ok(val)
@@ -58,7 +58,7 @@ impl ReturnStatement {
 }
 
 impl Evaluate for ReturnStatement {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         Ok(Object::Return(Box::new(self.value.eval(environment)?)))
     }
 }
@@ -89,7 +89,7 @@ impl ExpressionStatement {
 }
 
 impl Evaluate for ExpressionStatement {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
         self.expression.eval(environment)
     }
 }
@@ -118,8 +118,8 @@ impl BlockStatement {
     }
 
 
-    pub fn statements(&self) -> &Vec<Box<dyn Statement + Send + Sync>> {
-        &self.statements
+    pub fn statements(&mut self) -> &mut Vec<Box<dyn Statement + Send + Sync>> {
+        &mut self.statements
     }
 
     pub fn clone_as_block_statement(&self) -> BlockStatement {
@@ -129,8 +129,8 @@ impl BlockStatement {
 }
 
 impl Evaluate for BlockStatement {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object> {
-        eval_all(&self.statements, environment)
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        eval_all(&mut self.statements, environment, true)
     }
 }
 

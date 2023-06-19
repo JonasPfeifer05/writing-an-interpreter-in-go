@@ -14,8 +14,8 @@ impl Program {
     }
 
 
-    pub fn statements(&self) -> &Vec<Box<dyn Statement + Sync + Send>> {
-        &self.statements
+    pub fn statements(&mut self) -> &mut Vec<Box<dyn Statement + Sync + Send>> {
+        &mut self.statements
     }
 }
 

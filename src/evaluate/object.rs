@@ -5,7 +5,7 @@ use crate::evaluate::environment::Environment;
 use crate::evaluate::evaluate::eval;
 
 pub trait Evaluate {
-    fn eval(&self, environment: &mut Environment) -> anyhow::Result<Object>;
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object>;
 }
 
 #[derive(Debug)]
