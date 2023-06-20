@@ -1,19 +1,27 @@
 let fibo = fn(n) {
     if (n < 1) { ret err("Cannot compute a fibonacci number < 1!"); }
     if (n == 1 || n == 2) { ret 1; }
-    fibo(n-1) + fibo(n-2)
+
+    let a = 1;
+    let b = 1;
+    let tmp = 0;
+
+    while (n-2 > 0) {
+        tmp = a + b;
+        a = b;
+        b = tmp;
+        n = n-1;
+    }
+
+    b
+};
+
+let fiboRec = fn(n) {
+    if (n < 1) { ret err("Cannot compute a fibonacci number < 1!"); }
+    if (n == 1 || n == 2) { ret 1; }
+    fiboRec(n-2) + fiboRec(n-1)
 };
 
 let even = fn(x) {
     x % 2 == 0
 };
-
-let num = int(input("Enter a number: "));
-
-print(num);
-
-print(fibo(num));
-
-print(even(num));
-
-1

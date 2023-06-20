@@ -39,6 +39,7 @@ impl Lexer {
         keywords.insert("else".to_string(), Token::Else);
         keywords.insert("ret".to_string(), Token::Return);
         keywords.insert("err".to_string(), Token::Error);
+        keywords.insert("while".to_string(), Token::While);
 
         Self {
             chars: program.chars().collect(),

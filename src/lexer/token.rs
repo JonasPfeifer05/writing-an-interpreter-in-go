@@ -52,6 +52,7 @@ pub enum Token {
     Else,
     Return,
     Error,
+    While,
 }
 
 impl Token {
@@ -113,6 +114,7 @@ impl Display for Token {
             Token::Else => "else",
             Token::Return => "ret",
             Token::Error => "err",
+            Token::While => "while"
         };
         f.write_str(&format!("{representation}"))
     }
@@ -163,6 +165,7 @@ impl Debug for Token {
             Token::Return => "ret",
             Token::Error => "err",
 
+            Token::While => "while",
         };
         f.write_str(&format!("{representation}"))
     }

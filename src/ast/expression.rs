@@ -103,7 +103,7 @@ impl Display for Integer {
 
 #[derive(Debug)]
 pub struct StringExpression {
-    val: String
+    val: String,
 }
 
 impl StringExpression {
@@ -257,8 +257,8 @@ impl Evaluate for InfixExpression {
         match self.operator {
             Token::Plus => {
                 match left {
-                    Object::Int(_) => {},
-                    Object::String(_) => {},
+                    Object::Int(_) => {}
+                    Object::String(_) => {}
                     _ => bail!(IllegalOperation(self.operator.clone(), left))
                 }
             }
@@ -274,7 +274,7 @@ impl Evaluate for InfixExpression {
                     Object::Int(_) => {}
                     _ => bail!(IllegalOperation(self.operator.clone(), left))
                 }
-            },
+            }
             Token::Equal |
             Token::NotEqual => match left {
                 Object::Int(_) => {}
@@ -318,22 +318,17 @@ impl Evaluate for InfixExpression {
 
         Ok(match self.operator {
             Token::Plus => {
-                if left_int.is_some() { Object::Int(left_int.unwrap() + right_int.unwrap())  }
-                else { Object::String(format!("{}{}", left_string.unwrap(), right_string.unwrap())) }
-            },
+                if left_int.is_some() { Object::Int(left_int.unwrap() + right_int.unwrap()) } else { Object::String(format!("{}{}", left_string.unwrap(), right_string.unwrap())) }
+            }
             Token::Minus => Object::Int(left_int.unwrap() - right_int.unwrap()),
             Token::Asterisk => Object::Int(left_int.unwrap() * right_int.unwrap()),
             Token::Slash => Object::Int(left_int.unwrap() / right_int.unwrap()),
             Token::Modular => Object::Int(left_int.unwrap() % right_int.unwrap()),
             Token::Equal => Object::Bool({
-                if left_bool.is_some() { left_bool.unwrap() == right_bool.unwrap()  }
-                else if left_string.is_some() { left_string.unwrap() == right_string.unwrap()  }
-                else { left_int.unwrap() == right_int.unwrap() }
+                if left_bool.is_some() { left_bool.unwrap() == right_bool.unwrap() } else if left_string.is_some() { left_string.unwrap() == right_string.unwrap() } else { left_int.unwrap() == right_int.unwrap() }
             }),
             Token::NotEqual => Object::Bool({
-                if left_bool.is_some() { left_bool.unwrap() != right_bool.unwrap()  }
-                else if left_string.is_some() { left_string.unwrap() != right_string.unwrap()  }
-                else { left_int.unwrap() != right_int.unwrap() }
+                if left_bool.is_some() { left_bool.unwrap() != right_bool.unwrap() } else if left_string.is_some() { left_string.unwrap() != right_string.unwrap() } else { left_int.unwrap() != right_int.unwrap() }
             }),
             Token::Lt => Object::Bool(left_int.unwrap() < right_int.unwrap()),
             Token::Gt => Object::Bool(left_int.unwrap() > right_int.unwrap()),
@@ -390,9 +385,8 @@ impl Evaluate for IfExpression {
 
         if condition {
             eval_all(self.consequence.statements(), environment, false)
-        }
-        else if let Some(alternative) = &mut self.alternative {
-            eval_all(alternative.statements(),environment, false)
+        } else if let Some(alternative) = &mut self.alternative {
+            eval_all(alternative.statements(), environment, false)
         } else {
             Ok(Object::Null)
         }
@@ -585,7 +579,7 @@ impl Display for CallExpression {
 
 #[derive(Debug)]
 pub struct ErrorExpression {
-    content: Box<dyn Expression + Send + Sync>
+    content: Box<dyn Expression + Send + Sync>,
 }
 
 impl ErrorExpression {
@@ -661,5 +655,60 @@ impl Expression for AssignExpression {
 
     fn as_any(&mut self) -> &mut dyn Any {
         self
+    }
+}
+
+#[derive(Debug)]
+pub struct WhileExpression {
+    condition: Box<dyn Expression + Send + Sync>,
+    consequence: BlockStatement,
+}
+
+impl WhileExpression {
+    pub fn new(condition: Box<dyn Expression + Send + Sync>, consequence: BlockStatement) -> Self {
+        Self { condition, consequence }
+    }
+}
+
+impl Evaluate for WhileExpression {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let mut condition = match self.condition.eval(environment)? {
+            Object::Bool(val) => val,
+            _ => bail!(UnexpectedObject("Boolean".to_string()))
+        };
+
+        let mut res = Object::Null;
+
+        while condition {
+            res = eval_all(self.consequence.statements(), environment, false)?;
+
+            condition = match self.condition.eval(environment)? {
+                Object::Bool(val) => val,
+                _ => bail!(UnexpectedObject("Boolean".to_string()))
+            };
+        }
+        Ok(res)
+    }
+}
+
+impl CloneAsExpression for WhileExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
+        Box::new(WhileExpression::new(self.condition.clone_as_expression(), self.consequence.clone_as_block_statement()))
+    }
+}
+
+impl Expression for WhileExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<WhileExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl Display for WhileExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("while ({}) {{ {} }}", self.condition, self.consequence))
     }
 }

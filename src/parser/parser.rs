@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use anyhow::bail;
-use crate::ast::expression::{AssignExpression, Boolean, CallExpression, ErrorExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression};
+use crate::ast::expression::{AssignExpression, Boolean, CallExpression, ErrorExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression, WhileExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -130,8 +130,9 @@ impl Parser {
             Token::Minus |
             Token::Bang => self.parse_prefix_expression(),
             Token::LParent => self.parse_grouped_expression(),
-            Token::If => self.parse_if_statement_expression(),
+            Token::If => self.parse_if_expression(),
             Token::Function => self.parse_function_expression(),
+            Token::While => self.parse_while_expression(),
             Token::Error => self.parse_error(),
             _ => bail!(UnexpectedToken(self.current_token().unwrap().clone()))
         };
@@ -160,6 +161,22 @@ impl Parser {
         }
 
         left_expr
+    }
+
+    fn parse_while_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
+        self.move_pointer();
+
+        self.assert_current_token(&Token::LParent)?;
+        self.move_pointer();
+
+        let condition = self.parse_expression(Precedences::Lowest as u8)?;
+
+        self.assert_current_token(&Token::RParent)?;
+        self.move_pointer();
+
+        let consequence = self.parse_block_statement()?;
+
+        return Ok(Box::new(WhileExpression::new(condition, consequence)));
     }
 
     fn parse_assign_expression(&mut self, name: Box<dyn Expression + Send + Sync>) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
@@ -243,7 +260,7 @@ impl Parser {
         Ok(Box::new(PrefixExpression::new(prefix, expression)))
     }
 
-    fn parse_if_statement_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
+    fn parse_if_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
         self.move_pointer();
 
         self.assert_current_token(&Token::LParent)?;
