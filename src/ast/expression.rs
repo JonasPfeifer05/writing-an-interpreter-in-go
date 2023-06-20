@@ -1,5 +1,5 @@
 use std::any::{Any, TypeId};
-use std::fmt::{Debug, Display, Formatter, Write};
+use std::fmt::{Debug, Display, format, Formatter, Write};
 use anyhow::bail;
 use crate::evaluate::build_in::BuildInFunction;
 
@@ -265,6 +265,7 @@ impl Evaluate for InfixExpression {
             Token::Minus |
             Token::Asterisk |
             Token::Slash |
+            Token::Modular |
             Token::Lt |
             Token::Gt |
             Token::Lte |
@@ -281,6 +282,11 @@ impl Evaluate for InfixExpression {
                 Object::String(_) => {}
                 _ => bail!(IllegalOperation(self.operator.clone(), left))
             },
+            Token::Or |
+            Token::And => match left {
+                Object::Bool(_) => {}
+                _ => bail!(IllegalOperation(self.operator.clone(), left))
+            }
             _ => unreachable!()
         }
         let left_int = match left {
@@ -318,6 +324,7 @@ impl Evaluate for InfixExpression {
             Token::Minus => Object::Int(left_int.unwrap() - right_int.unwrap()),
             Token::Asterisk => Object::Int(left_int.unwrap() * right_int.unwrap()),
             Token::Slash => Object::Int(left_int.unwrap() / right_int.unwrap()),
+            Token::Modular => Object::Int(left_int.unwrap() % right_int.unwrap()),
             Token::Equal => Object::Bool({
                 if left_bool.is_some() { left_bool.unwrap() == right_bool.unwrap()  }
                 else if left_string.is_some() { left_string.unwrap() == right_string.unwrap()  }
@@ -332,6 +339,8 @@ impl Evaluate for InfixExpression {
             Token::Gt => Object::Bool(left_int.unwrap() > right_int.unwrap()),
             Token::Lte => Object::Bool(left_int.unwrap() <= right_int.unwrap()),
             Token::Gte => Object::Bool(left_int.unwrap() >= right_int.unwrap()),
+            Token::Or => Object::Bool(left_bool.unwrap() || right_bool.unwrap()),
+            Token::And => Object::Bool(left_bool.unwrap() && right_bool.unwrap()),
             _ => unreachable!()
         })
     }
@@ -571,5 +580,86 @@ impl Display for CallExpression {
         }
         args.pop();
         f.write_str(&format!("{}({})", self.function, args))
+    }
+}
+
+#[derive(Debug)]
+pub struct ErrorExpression {
+    content: Box<dyn Expression + Send + Sync>
+}
+
+impl ErrorExpression {
+    pub fn new(content: Box<dyn Expression + Send + Sync>) -> Self {
+        Self { content }
+    }
+}
+
+impl Display for ErrorExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("err: {}", self.content))
+    }
+}
+
+impl Evaluate for ErrorExpression {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        Ok(Object::Error(Box::new(self.content.eval(environment)?)))
+    }
+}
+
+impl CloneAsExpression for ErrorExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
+        Box::new(ErrorExpression::new(self.content.clone_as_expression()))
+    }
+}
+
+impl Expression for ErrorExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<ErrorExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct AssignExpression {
+    name: Identifier,
+    value: Box<dyn Expression + Send + Sync>,
+}
+
+impl AssignExpression {
+    pub fn new(name: Identifier, value: Box<dyn Expression + Send + Sync>) -> Self {
+        Self { name, value }
+    }
+}
+
+impl Display for AssignExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{} = {};", self.name, self.value))
+    }
+}
+
+impl Evaluate for AssignExpression {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let val = self.value.eval(environment)?;
+        environment.set(self.name.value.clone(), val.clone());
+        Ok(val)
+    }
+}
+
+impl CloneAsExpression for AssignExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
+        Box::new(AssignExpression::new(self.name.clone(), self.value.clone_as_expression()))
+    }
+}
+
+impl Expression for AssignExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<AssignExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 }

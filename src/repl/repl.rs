@@ -45,10 +45,10 @@ pub fn start_repl() {
             if let Ok(result) = result {
                 println!("{}", result);
             } else if let Err(err) = result {
-                eprintln!("Error while evaluating: {err}", )
+                eprintln!("{}", format!("Error while evaluating: {err}").red(), )
             }
         } else if let Err(err) = program {
-            eprintln!("Error while parsing: {err}");
+            eprintln!("{}", format!("Error while parsing: {err}").red());
         }
     }
 

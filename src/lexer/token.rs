@@ -20,6 +20,7 @@ pub enum Token {
     Minus,
     Asterisk,
     Slash,
+    Modular,
 
     // Logic Operators
     Bang,
@@ -29,6 +30,8 @@ pub enum Token {
     Gt,
     Lte,
     Gte,
+    Or,
+    And,
 
     // Separation Characters
     Comma,
@@ -48,6 +51,7 @@ pub enum Token {
     If,
     Else,
     Return,
+    Error,
 }
 
 impl Token {
@@ -80,6 +84,7 @@ impl Display for Token {
             Token::Minus => "-",
             Token::Asterisk => "*",
             Token::Slash => "/",
+            Token::Modular => "%",
 
             Token::Bang => "!",
 
@@ -89,6 +94,8 @@ impl Display for Token {
             Token::NotEqual => "!=",
             Token::Gte => ">=",
             Token::Lte => "<=",
+            Token::Or => "||",
+            Token::And => "&&",
 
             Token::Comma => ",",
             Token::Semicolon => ";",
@@ -105,6 +112,7 @@ impl Display for Token {
             Token::If => "if",
             Token::Else => "else",
             Token::Return => "ret",
+            Token::Error => "err",
         };
         f.write_str(&format!("{representation}"))
     }
@@ -125,6 +133,7 @@ impl Debug for Token {
             Token::Minus => "-",
             Token::Asterisk => "*",
             Token::Slash => "/",
+            Token::Modular => "%",
 
             Token::Bang => "!",
 
@@ -134,6 +143,8 @@ impl Debug for Token {
             Token::NotEqual => "!=",
             Token::Gte => ">=",
             Token::Lte => "<=",
+            Token::Or => "||",
+            Token::And => "&&",
 
             Token::Comma => ",",
             Token::Semicolon => ";",
@@ -150,6 +161,8 @@ impl Debug for Token {
             Token::If => "if",
             Token::Else => "else",
             Token::Return => "ret",
+            Token::Error => "err",
+
         };
         f.write_str(&format!("{representation}"))
     }

@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Write};
 use crate::ast::expression::Identifier;
 use crate::ast::statement::BlockStatement;
 use crate::evaluate::build_in::BuildInFunction;
@@ -21,6 +21,7 @@ pub enum Object {
         body: BlockStatement,
         env: Environment,
     },
+    Error(Box<Object>),
     BuildIn(Box<dyn BuildInFunction>)
 }
 
@@ -37,7 +38,8 @@ impl Clone for Object {
                 env: env.clone(),
             },
             Object::String(val) => Object::String(val.clone()),
-            Object::BuildIn(val) => Object::BuildIn(val.clone_as_build_in_function())
+            Object::BuildIn(val) => Object::BuildIn(val.clone_as_build_in_function()),
+            Object::Error(val) => Object::Error(val.clone())
         }
     }
 }
@@ -58,6 +60,7 @@ impl Display for Object {
             Object::Function { .. } => f.write_str("fn"),
             Object::String(val) => f.write_str(&format!("\"{val}\"")),
             Object::BuildIn(_) => f.write_str("build_in"),
+            Object::Error(val) => f.write_str(&format!("err: {}", val)),
         }
     }
 }

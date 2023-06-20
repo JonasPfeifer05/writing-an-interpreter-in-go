@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::evaluate::build_in::LenFunction;
+use crate::evaluate::build_in::{CastIntFunction, InputFunction, LenFunction, PrintFunction};
 use crate::evaluate::object::Object;
 
 #[derive(Debug, Clone)]
@@ -13,6 +13,9 @@ impl Default for Environment {
         let mut build_in = HashMap::default();
 
         build_in.insert("len".to_string(), Object::BuildIn(Box::new(LenFunction)));
+        build_in.insert("input".to_string(), Object::BuildIn(Box::new(InputFunction)));
+        build_in.insert("int".to_string(), Object::BuildIn(Box::new(CastIntFunction)));
+        build_in.insert("print".to_string(), Object::BuildIn(Box::new(PrintFunction)));
 
         Self {
             store: HashMap::default(),

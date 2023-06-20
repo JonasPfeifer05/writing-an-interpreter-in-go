@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use anyhow::bail;
-use crate::ast::expression::{Boolean, CallExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression};
+use crate::ast::expression::{AssignExpression, Boolean, CallExpression, ErrorExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -132,9 +132,9 @@ impl Parser {
             Token::LParent => self.parse_grouped_expression(),
             Token::If => self.parse_if_statement_expression(),
             Token::Function => self.parse_function_expression(),
+            Token::Error => self.parse_error(),
             _ => bail!(UnexpectedToken(self.current_token().unwrap().clone()))
         };
-
 
         while !self.out_of_tokens() && !self.out_of_peek_tokens() && !Token::variant_is_equal(self.peek_token().unwrap(), &Token::Semicolon) && precedence < self.current_precedence()? as u8 {
             let infix = match self.current_token().unwrap() {
@@ -142,13 +142,17 @@ impl Parser {
                 Token::Minus |
                 Token::Asterisk |
                 Token::Slash |
+                Token::Modular |
                 Token::Equal |
                 Token::NotEqual |
                 Token::Lt |
                 Token::Gt |
                 Token::Lte |
-                Token::Gte => self.parse_infix_expression(left_expr?),
+                Token::Gte |
+                Token::Or |
+                Token::And => self.parse_infix_expression(left_expr?),
                 Token::LParent => self.parse_call_expression(left_expr?),
+                Token::Assign => self.parse_assign_expression(left_expr?),
                 _ => { return left_expr; }
             };
 
@@ -156,6 +160,29 @@ impl Parser {
         }
 
         left_expr
+    }
+
+    fn parse_assign_expression(&mut self, name: Box<dyn Expression + Send + Sync>) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
+        let name = name.to_string();
+
+        self.move_pointer();
+
+        let expr = self.parse_expression(Precedences::Lowest as u8)?;
+
+        Ok(Box::new(AssignExpression::new(Identifier::new(name), expr)))
+    }
+
+    fn parse_error(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
+        self.move_pointer();
+        self.assert_current_token(&Token::LParent)?;
+        self.move_pointer();
+
+        let expression = self.parse_expression(Precedences::Lowest as u8)?;
+
+        self.assert_current_token(&Token::RParent)?;
+        self.move_pointer();
+
+        Ok(Box::new(ErrorExpression::new(expression)))
     }
 
     fn parse_call_expression(&mut self, function: Box<dyn Expression + Send + Sync>) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {

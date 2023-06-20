@@ -38,6 +38,7 @@ impl Lexer {
         keywords.insert("if".to_string(), Token::If);
         keywords.insert("else".to_string(), Token::Else);
         keywords.insert("ret".to_string(), Token::Return);
+        keywords.insert("err".to_string(), Token::Error);
 
         Self {
             chars: program.chars().collect(),
@@ -86,6 +87,7 @@ impl Lexer {
             '-' => Token::Minus,
             '*' => Token::Asterisk,
             '/' => Token::Slash,
+            '%' => Token::Modular,
 
             '!' => {
                 match self.peek_char() {
@@ -115,7 +117,24 @@ impl Lexer {
                     _ => Token::Gt,
                 }
             },
-
+            '|' => {
+                match self.peek_char() {
+                    Some('|') => {
+                        self.move_pointer();
+                        Token::Or
+                    }
+                    _ => Token::Illegal,
+                }
+            }
+            '&' => {
+                match self.peek_char() {
+                    Some('&') => {
+                        self.move_pointer();
+                        Token::And
+                    }
+                    _ => Token::Illegal,
+                }
+            }
             ',' => Token::Comma,
             ';' => Token::Semicolon,
 

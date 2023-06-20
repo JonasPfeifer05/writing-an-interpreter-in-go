@@ -1,13 +1,19 @@
 let fibo = fn(n) {
-    if (n < 1) { ret -1; }
-    if (n == 1) { ret 1; }
-    if (n == 2) { ret 1; }
+    if (n < 1) { ret err("Cannot compute a fibonacci number < 1!"); }
+    if (n == 1 || n == 2) { ret 1; }
     fibo(n-1) + fibo(n-2)
 };
 
-let add = fn(a,b) {a+b};
-
-let recApply = fn(n, x, func) {
-    if (n == 1) { ret func(x); }
-    func(recApply(n-1, x, func))
+let even = fn(x) {
+    x % 2 == 0
 };
+
+let num = int(input("Enter a number: "));
+
+print(num);
+
+print(fibo(num));
+
+print(even(num));
+
+1
