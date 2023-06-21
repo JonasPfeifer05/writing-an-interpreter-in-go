@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::evaluate::build_in::{CastIntFunction, InputFunction, LenFunction, PrintFunction};
+use crate::evaluate::build_in::{CastIntFunction, RemoveFunction, InputFunction, LenFunction, PrintFunction};
 use crate::evaluate::object::Object;
 
 #[derive(Debug, Clone)]
@@ -16,6 +16,7 @@ impl Default for Environment {
         build_in.insert("input".to_string(), Object::BuildIn(Box::new(InputFunction)));
         build_in.insert("int".to_string(), Object::BuildIn(Box::new(CastIntFunction)));
         build_in.insert("print".to_string(), Object::BuildIn(Box::new(PrintFunction)));
+        build_in.insert("remove".to_string(), Object::BuildIn(Box::new(RemoveFunction)));
 
         Self {
             store: HashMap::default(),

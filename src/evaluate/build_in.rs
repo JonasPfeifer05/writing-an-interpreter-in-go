@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::io::{BufRead, stdin, stdout, Write};
+use std::ops::Deref;
 use anyhow::bail;
 use crate::evaluate::error::EvalError::{DifferentAmountOfArguments, IllegalOperation};
 use crate::evaluate::object::Object;
@@ -105,7 +106,7 @@ impl BuildInFunction for PrintFunction {
         let mut string = String::new();
 
         for arg in &args {
-            string.push_str(arg.to_string().as_str())
+            string.push_str(&arg.value())
         }
 
         println!("{}", string);
@@ -113,3 +114,35 @@ impl BuildInFunction for PrintFunction {
         Ok(Object::String(string))
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct RemoveFunction;
+
+impl CloneAsBuildInFunction for RemoveFunction {
+    fn clone_as_build_in_function(&self) -> Box<dyn BuildInFunction> {
+        Box::new(self.clone())
+    }
+}
+
+impl BuildInFunction for RemoveFunction {
+    fn eval(&mut self, mut args: Vec<Object>) -> anyhow::Result<Object> {
+        if args.len() != 2 { bail!(DifferentAmountOfArguments) }
+
+        let index = match &args[1] {
+            Object::Int(val) => val.clone(),
+            _ => bail!(IllegalOperation(Token::Ident("get".to_string()), args[1].clone())),
+        };
+
+        let array = match &mut args[0] {
+            Object::Array(array) => array,
+            _ => bail!(IllegalOperation(Token::Ident("get".to_string()), args[0].clone()))
+        };
+
+        if index < 0 || index as usize >= array.len() { return Ok(Object::Error(Box::new(Object::String("Index out of range!".to_string())))) }
+
+        Ok(array.remove(index as usize).deref().clone())
+    }
+}
+
+
+pub struct PopFunction;

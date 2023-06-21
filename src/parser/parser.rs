@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use anyhow::bail;
-use crate::ast::expression::{AssignExpression, Boolean, CallExpression, ErrorExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression, WhileExpression};
+use crate::ast::expression::{ArrayExpression, AssignExpression, Boolean, CallExpression, ErrorExpression, Expression, FunctionExpression, Identifier, IfExpression, InfixExpression, Integer, PrefixExpression, StringExpression, WhileExpression};
 use crate::ast::precedences::Precedences;
 use crate::parser::program::Program;
 use crate::ast::statement::{BlockStatement, ExpressionStatement, LetStatement, ReturnStatement, Statement};
@@ -134,6 +134,7 @@ impl Parser {
             Token::Function => self.parse_function_expression(),
             Token::While => self.parse_while_expression(),
             Token::Error => self.parse_error(),
+            Token::LBracket => self.parse_array_expression(),
             _ => bail!(UnexpectedToken(self.current_token().unwrap().clone()))
         };
 
@@ -161,6 +162,30 @@ impl Parser {
         }
 
         left_expr
+    }
+
+    fn parse_array_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {
+        self.move_pointer();
+
+        if self.assert_current_token(&Token::RBracket).is_ok() {
+            self.move_pointer();
+            return Ok(Box::new(ArrayExpression::new(vec![])));
+        }
+
+        let mut expressions = vec![];
+
+        expressions.push(self.parse_expression(Precedences::Lowest as u8)?);
+
+        while self.assert_current_token(&Token::Comma).is_ok() {
+            self.move_pointer();
+            if self.assert_current_token(&Token::RBracket).is_ok() { break; };
+            expressions.push(self.parse_expression(Precedences::Lowest as u8)?);
+        }
+
+        self.assert_current_token(&Token::RBracket)?;
+        self.move_pointer();
+
+        Ok(Box::new(ArrayExpression::new(expressions)))
     }
 
     fn parse_while_expression(&mut self) -> anyhow::Result<Box<dyn Expression + Send + Sync>> {

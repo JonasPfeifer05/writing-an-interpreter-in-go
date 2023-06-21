@@ -25,3 +25,11 @@ let fiboRec = fn(n) {
 let even = fn(x) {
     x % 2 == 0
 };
+
+let promptNumber = fn(prompt) {
+    int(input(prompt))
+};
+
+let num = promptNumber("Enter a number: ");
+
+while (num > 0) { print(num); num = num - 1; }

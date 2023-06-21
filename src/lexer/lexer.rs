@@ -74,6 +74,8 @@ impl Lexer {
             ')' => Token::RParent,
             '{' => Token::LBrace,
             '}' => Token::RBrace,
+            '[' => Token::LBracket,
+            ']' => Token::RBracket,
 
             '=' => {
                 match self.peek_char() {

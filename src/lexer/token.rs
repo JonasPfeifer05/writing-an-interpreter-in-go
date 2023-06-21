@@ -42,6 +42,8 @@ pub enum Token {
     RParent,
     LBrace,
     RBrace,
+    LBracket,
+    RBracket,
 
     // Keywords
     Function,
@@ -105,6 +107,8 @@ impl Display for Token {
             Token::RParent => ")",
             Token::LBrace => "{",
             Token::RBrace => "}",
+            Token::LBracket => "[",
+            Token::RBracket => "]",
 
             Token::Function => "function",
             Token::Let => "let",
@@ -116,7 +120,7 @@ impl Display for Token {
             Token::Error => "err",
             Token::While => "while"
         };
-        f.write_str(&format!("{representation}"))
+        f.write_str(&format!("{}", representation))
     }
 }
 
@@ -155,6 +159,8 @@ impl Debug for Token {
             Token::RParent => ")",
             Token::LBrace => "{",
             Token::RBrace => "}",
+            Token::LBracket => "[",
+            Token::RBracket => "]",
 
             Token::Function => "function",
             Token::Let => "let",
@@ -167,6 +173,6 @@ impl Debug for Token {
 
             Token::While => "while",
         };
-        f.write_str(&format!("{representation}"))
+        f.write_str(&format!("{}", representation))
     }
 }

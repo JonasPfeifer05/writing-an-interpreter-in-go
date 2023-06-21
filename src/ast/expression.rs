@@ -712,3 +712,55 @@ impl Display for WhileExpression {
         f.write_str(&format!("while ({}) {{ {} }}", self.condition, self.consequence))
     }
 }
+
+pub struct ArrayExpression {
+    members: Vec<Box<dyn Expression + Send + Sync>>,
+}
+
+impl ArrayExpression {
+    pub fn new(members: Vec<Box<dyn Expression + Send + Sync>>) -> Self {
+        Self { members }
+    }
+}
+
+impl Display for ArrayExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Debug for ArrayExpression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{:?}", self.members))
+    }
+}
+
+impl Evaluate for ArrayExpression {
+    fn eval(&mut self, environment: &mut Environment) -> anyhow::Result<Object> {
+        let mut objects = vec![];
+        for member in &mut self.members {
+            objects.push(Box::new(member.eval(environment)?));
+        }
+        Ok(Object::Array(objects))
+    }
+}
+
+impl CloneAsExpression for ArrayExpression {
+    fn clone_as_expression(&self) -> Box<dyn Expression + Send + Sync> {
+        let mut members = vec![];
+        for member in &self.members {
+            members.push(member.clone_as_expression());
+        }
+        Box::new(ArrayExpression::new(members))
+    }
+}
+
+impl Expression for ArrayExpression {
+    fn expression_id(&self) -> TypeId {
+        TypeId::of::<ArrayExpression>()
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
